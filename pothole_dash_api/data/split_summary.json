@@ -1,0 +1,16 @@
+{
+  "classes": [
+    "normal",
+    "potholes"
+  ],
+  "counts": {
+    "normal": {
+      "train": 282,
+      "val": 70
+    },
+    "potholes": {
+      "train": 264,
+      "val": 65
+    }
+  }
+}

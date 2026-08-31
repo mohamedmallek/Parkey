@@ -1,0 +1,263 @@
+.events-map {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+
+  &.chip-alert {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: #fecaca;
+  }
+
+  &.chip-approx {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+  }
+}
+
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  background: var(--surface);
+}
+
+.map-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 12px;
+  min-height: 520px;
+}
+
+.map-container {
+  height: 520px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  z-index: 0;
+}
+
+.map-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+}
+
+.map-detail-hint {
+  padding: 20px;
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+
+    p {
+      margin: 8px 0 0;
+      line-height: 1.5;
+    }
+
+    .muted {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+  }
+
+  .empty-state-icon {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+}
+
+.map-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+
+  h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+}
+
+.btn-close-detail {
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+.map-detail-img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border);
+}
+
+.map-detail-placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  background: #f8fafc;
+}
+
+.map-detail-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8125rem;
+  align-items: flex-start;
+}
+
+.detail-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.ocr-text {
+  font-size: 0.75rem;
+  word-break: break-word;
+  text-align: right;
+}
+
+.map-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--border);
+
+  &.legend-pothole {
+    background: #dc2626;
+  }
+
+  &.legend-signs {
+    background: #2563eb;
+  }
+
+  &.legend-approx {
+    background: #f59e0b;
+    border-color: #f59e0b;
+  }
+}
+
+.legend-heat {
+  width: 48px;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #fde68a, #f97316, #ef4444, #991b1b);
+}
+
+:host ::ng-deep .status-pill,
+:host ::ng-deep .severity-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+:host ::ng-deep .map-popup {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 992px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .map-container {
+    height: 400px;
+  }
+
+  .map-detail-hint {
+    display: none;
+  }
+}

@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: onsr-pothole-api
+  config:
+    import: optional:file:./application-local.yml
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/onsr_pothole}
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:onsr-dev-secret-change-me-in-production-min-32-chars!!}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+  ml:
+    base-url: ${ML_SERVICE_URL:http://127.0.0.1:5000}
+  admin:
+    email: ${ADMIN_EMAIL:admin@onsr.local}
+    password: ${ADMIN_PASSWORD:Admin123!}
+    full-name: ${ADMIN_FULL_NAME:Administrateur ONSR}
+  mail:
+    enabled: ${MAIL_ENABLED:true}
+    from: ${MAIL_FROM:${SMTP_USER:noreply@onsr.local}}
+    from-name: ${MAIL_FROM_NAME:ONSR Surveillance routière}
+    app-url: ${APP_URL:http://localhost:4200}
+
+logging:
+  level:
+    com.onsr: INFO

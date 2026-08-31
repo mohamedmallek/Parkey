@@ -1,0 +1,155 @@
+<div class="events-map">
+  <div class="map-toolbar">
+    <div class="map-stats">
+      <span class="chip-stat"><i class="bi bi-geo-alt"></i> {{ stats().onMap }} / {{ stats().total }} sur la carte</span>
+      <span class="chip-stat chip-alert"><i class="bi bi-exclamation-triangle"></i> {{ stats().alerts }} alertes</span>
+      @if (stats().approximate > 0) {
+        <span class="chip-stat chip-approx"><i class="bi bi-pin-map"></i> {{ stats().approximate }} position ville</span>
+      }
+    </div>
+    <div class="map-controls">
+      <select class="map-select" [value]="filterModel()" (change)="filterModel.set($any($event.target).value)">
+        <option value="all">Tous les modèles</option>
+        <option value="pothole">Nids-de-poule</option>
+        <option value="signs_damage">Signalétique</option>
+      </select>
+      <label class="map-toggle">
+        <input type="checkbox" [checked]="alertsOnly()" (change)="alertsOnly.set($any($event.target).checked)" />
+        Alertes seulement
+      </label>
+      <label class="map-toggle">
+        <input type="checkbox" [checked]="showHeatmap()" (change)="toggleHeatmap()" />
+        Heatmap
+      </label>
+      <label class="map-toggle">
+        <input type="checkbox" [checked]="showMarkers()" (change)="toggleMarkers()" />
+        Marqueurs
+      </label>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="fitBounds()"><i class="bi bi-fullscreen"></i> Ajuster</button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="refresh.emit()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+    </div>
+  </div>
+
+  <div class="map-layout">
+    <div #mapContainer class="map-container" role="application" aria-label="Carte des anomalies routières"></div>
+
+    @if (selected(); as point) {
+      <aside class="map-detail">
+        <div class="map-detail-head">
+          <h3>Détail anomalie</h3>
+          <button type="button" class="btn-close-detail" (click)="clearSelection()" aria-label="Fermer">&times;</button>
+        </div>
+
+        @if (selectedFrameUrl()) {
+          <img class="map-detail-img" [src]="selectedFrameUrl()!" [alt]="point.event.label" />
+        } @else if (hasFrame(point.event)) {
+          <div class="map-detail-placeholder">Chargement de la capture…</div>
+        }
+
+        <div class="map-detail-body">
+          <div class="detail-row">
+            <span class="detail-label">Type</span>
+            <span class="badge" [class.badge-alert]="point.event.alert" [class.badge-ok]="!point.event.alert">
+              {{ point.event.label }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Modèle</span>
+            <span>{{ modelLabel(point.event.model) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Statut</span>
+            <span class="status-pill" [class]="statusCssClass(point.event.status)">{{ statusLabel(point.event.status) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Gravité</span>
+            <span class="severity-pill" [class]="severityCssClass(point.event.severity)">{{ severityLabel(point.event.severity) }}</span>
+          </div>
+          @if (isPotholeEvent(point.event) && point.event.size_class) {
+            <div class="detail-row">
+              <span class="detail-label">Taille</span>
+              <span class="size-pill" [class]="sizeClassCss(point.event.size_class)">{{ sizeClassLabel(point.event.size_class) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Dimensions</span>
+              <span>{{ formatSizeCm(point.event.width_cm_est, point.event.length_cm_est) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Profondeur</span>
+              <span>{{ depthProxyLabel(point.event.depth_proxy) }}</span>
+            </div>
+          }
+          <div class="detail-row">
+            <span class="detail-label">Confiance</span>
+            <span>{{ point.event.prob * 100 | number:'1.1-1' }}%</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date</span>
+            <span>{{ formatDateFn()(point.event.ts_ms) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Localisation</span>
+            <span>
+              @if (point.approximate) {
+                ~{{ point.event.city ?? 'ville' }} (approx.)
+              } @else {
+                {{ point.lat | number:'1.5-5' }}, {{ point.lon | number:'1.5-5' }}
+              }
+            </span>
+          </div>
+          @if (point.event.zone) {
+            <div class="detail-row">
+              <span class="detail-label">Zone</span>
+              <span>{{ point.event.zone }}</span>
+            </div>
+          }
+          @if (point.event.ocr_text) {
+            <div class="detail-row">
+              <span class="detail-label">OCR</span>
+              <span class="mono ocr-text">{{ point.event.ocr_text }}</span>
+            </div>
+          }
+
+          <div class="map-detail-actions">
+            @if (canManage()) {
+              @if (currentStatus() === 'NOUVEAU') {
+                <button type="button" class="btn btn-success btn-sm" (click)="emitStatus('CONFIRME')">Confirmer</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" (click)="emitStatus('FAUX_POSITIF')">Rejeter</button>
+              }
+              @if (currentStatus() === 'CONFIRME') {
+                <button type="button" class="btn btn-primary btn-sm" (click)="emitStatus('EN_COURS')">Planifier</button>
+              }
+              @if (currentStatus() === 'EN_COURS') {
+                <button type="button" class="btn btn-accent btn-sm" (click)="emitStatus('RESOLU')">Résoudre</button>
+              }
+            }
+            <button type="button" class="btn btn-secondary btn-sm" (click)="openGoogleMaps(point)">
+              <i class="bi bi-map"></i> Google Maps
+            </button>
+            @if (point.event.video_ts_ms != null) {
+              <button type="button" class="btn btn-accent btn-sm" (click)="onOpenVideo()">
+                <i class="bi bi-play-btn"></i> Voir à la vidéo
+              </button>
+            }
+          </div>
+        </div>
+      </aside>
+    } @else {
+      <aside class="map-detail map-detail-hint">
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="bi bi-geo-alt"></i></div>
+          <div><strong>Carte interactive ONSR</strong></div>
+          <p>Cliquez sur un marqueur pour voir la photo, la probabilité et le lien vidéo.</p>
+          <p class="muted">La heatmap met en évidence les zones à risque (Tunis, Ariana…). Les événements sans GPS sont placés approximativement selon la ville.</p>
+        </div>
+      </aside>
+    }
+  </div>
+
+  <div class="map-legend">
+    <span><span class="legend-dot legend-pothole"></span> Nid-de-poule</span>
+    <span><span class="legend-dot legend-signs"></span> Signalétique</span>
+    <span><span class="legend-dot legend-approx"></span> Position ville (approx.)</span>
+    <span><span class="legend-heat"></span> Heatmap densité / gravité</span>
+  </div>
+</div>

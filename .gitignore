@@ -1,0 +1,39 @@
+# Secrets
+.env
+.env.*
+**/application-local.yml
+start-local.ps1
+
+# Python
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Angular
+**/node_modules/
+**/.angular/
+**/dist/
+
+# Java / Maven
+**/target/
+
+# Modèles et jeux de données (fichiers trop volumineux)
+**/*.pt
+pothole_dash_api/data/frames/
+pothole_dash_api/data/frames_test/
+pothole_dash_api/data/raw/
+pothole_dash_api/data/train/
+pothole_dash_api/data/val/
+pothole_dash_api/data/tmp_videos/
+pothole_dash_api/data/yolo_import/
+pothole_dash_api/data/signs_damage_raw/
+pothole_dash_api/data/signs_damage_yolo/
+pothole_dash_api/runs/
+pothole_dash_api/data/events.jsonl
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.iml

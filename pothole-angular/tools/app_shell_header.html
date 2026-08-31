@@ -1,0 +1,65 @@
+@if (!auth.isLoggedIn()) {
+  <div class="login-panel-steex">
+    <div class="login-card-steex">
+      <div class="text-center mb-4"><img src="assets/images/logo-3.png" alt="ONSR" height="48" /></div>
+      <h2 class="h4 mb-3">Connexion ONSR</h2>
+      <label class="form-label" for="login-email">Email</label>
+      <input id="login-email" type="email" class="form-control mb-3" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)" />
+      <label class="form-label" for="login-password">Mot de passe</label>
+      <input id="login-password" type="password" class="form-control mb-3" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)" (keyup.enter)="doLogin()" />
+      @if (loginError()) { <div class="alert alert-danger py-2">{{ loginError() }}</div> }
+      <button type="button" class="btn btn-primary w-100" (click)="doLogin()" [disabled]="loginLoading()">
+        @if (loginLoading()) { Connexion… } @else { Se connecter }
+      </button>
+    </div>
+  </div>
+} @else {
+<div id="layout-wrapper">
+  <div class="app-menu navbar-menu" [class.show]="sidebarOpen()">
+    <div class="navbar-brand-box">
+      <span class="logo logo-light"><span class="logo-lg"><img src="assets/images/logo-3.png" alt="ONSR" /></span></span>
+    </div>
+    <ul class="navbar-nav">
+      <li class="menu-title"><span>Menu</span></li>
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='dashboard'" (click)="setSection('dashboard')"><i class="bi bi-grid"></i> Tableau de bord</button></li>
+      @if (canAnalyze()) {
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='detection'" (click)="setSection('detection')"><i class="bi bi-camera"></i> Détection image</button></li>
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='video'" (click)="setSection('video')"><i class="bi bi-play-btn"></i> Analyse vidéo</button></li>
+      }
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='events'" (click)="setSection('events')"><i class="bi bi-table"></i> Événements</button></li>
+      @if (auth.user()?.role === 'ADMIN') {
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='users'" (click)="setSection('users')"><i class="bi bi-people"></i> Utilisateurs</button></li>
+      }
+    </ul>
+  </div>
+  <header id="page-topbar">
+    <div class="navbar-header">
+      <button type="button" class="btn btn-sm btn-light d-lg-none" (click)="toggleSidebar()"><i class="bi bi-list"></i></button>
+      <div class="user-topbar ms-auto">
+        <span class="user-name">{{ auth.user()?.fullName }}</span>
+        <span class="badge bg-primary-subtle text-primary">{{ auth.user()?.role }}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="doLogout()">Déconnexion</button>
+      </div>
+    </div>
+  </header>
+  <div class="main-content">
+    <div class="page-content">
+      <div class="container-fluid">
+        @if (activeSection() === 'dashboard') {
+        <div class="page-title-box mb-3"><h4 class="mb-1">Tableau de bord</h4><p class="text-muted mb-0">ONSR — Surveillance routière</p></div>
+        <div class="header bg-gradient-onsr pb-4 pt-4">
+          <div class="row g-3">
+            <div class="col-xl-3 col-sm-6"><div class="card"><div class="card-body"><p class="fs-md text-muted mb-0">Événements</p><h3 class="counter-value mt-3">{{ events().length }}</h3><p class="text-success mb-0"><i class="bi bi-database"></i> Historique</p></div></div></div>
+            <div class="col-xl-3 col-sm-6"><div class="card"><div class="card-body"><p class="fs-md text-muted mb-0">Alertes</p><h3 class="counter-value mt-3">{{ alertCount() }}</h3><p class="text-danger mb-0"><i class="bi bi-exclamation-triangle"></i> Critiques</p></div></div></div>
+            <div class="col-xl-3 col-sm-6"><div class="card"><div class="card-body"><p class="fs-md text-muted mb-0">Modèles IA</p><h3 class="counter-value mt-3">{{ modelsReadyCount() }}/{{ models().length }}</h3><p class="text-primary mb-0">{{ activeModelTitle() }}</p></div></div></div>
+            <div class="col-xl-3 col-sm-6"><div class="card"><div class="card-body"><p class="fs-md text-muted mb-0">GPS</p><h3 class="counter-value mt-3">{{ lat() != null ? 'ON' : 'OFF' }}</h3><p class="text-info mb-0"><i class="bi bi-geo-alt"></i> Position</p></div></div></div>
+          </div>
+        </div>
+        <div class="card mt-4"><div class="card-body d-flex flex-wrap gap-2">
+          @if (canAnalyze()) {
+            <button class="btn btn-primary" (click)="setSection('detection')"><i class="bi bi-camera me-1"></i> Détection</button>
+            <button class="btn btn-success" (click)="setSection('video')"><i class="bi bi-play-btn me-1"></i> Vidéo</button>
+          }
+          <button class="btn btn-secondary" (click)="setSection('events')"><i class="bi bi-table me-1"></i> Événements</button>
+        </div></div>
+        }
