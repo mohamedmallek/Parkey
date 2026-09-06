@@ -49,13 +49,18 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/api/health").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/api/auth/change-password")
+                        .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/models").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-                        .requestMatchers("/api/events/**").hasAnyRole("ADMIN", "OPERATOR")
-                        .requestMatchers("/api/predict", "/api/video/**", "/api/budget/**", "/api/materials/**").hasAnyRole("ADMIN", "OPERATOR")
-                        .requestMatchers(HttpMethod.GET, "/api/budget/status", "/api/materials/status").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR", "VIEWER")
+                        .requestMatchers("/api/events/**").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR")
+                        .requestMatchers("/api/predict", "/api/video/**", "/api/budget/**", "/api/materials/**").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR")
+                        .requestMatchers(HttpMethod.GET, "/api/budget/status", "/api/materials/status").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR", "VIEWER")
+                        .requestMatchers("/api/users/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/auth/me").authenticated()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())

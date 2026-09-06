@@ -21,6 +21,8 @@ public class User {
     private boolean enabled;
     private Instant createdAt;
     private Instant updatedAt;
+    private String resetTokenHash;
+    private Instant resetTokenExpiresAt;
 
     public String getId() {
         return id;
@@ -84,5 +86,21 @@ public class User {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getResetTokenHash() {
+        return resetTokenHash;
+    }
+
+    public void setResetTokenHash(String resetTokenHash) {
+        this.resetTokenHash = resetTokenHash;
+    }
+
+    public Instant getResetTokenExpiresAt() {
+        return resetTokenExpiresAt;
+    }
+
+    public void setResetTokenExpiresAt(Instant resetTokenExpiresAt) {
+        this.resetTokenExpiresAt = resetTokenExpiresAt;
     }
 }

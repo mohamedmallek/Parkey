@@ -42,11 +42,15 @@ public class UserService {
         return UserResponse.from(findUser(id));
     }
 
-    public CreateUserResponse create(CreateUserRequest request) {
-        if (request.getRole() == Role.ADMIN) {
-            throw new IllegalArgumentException("Seuls les rôles OPERATOR et VIEWER peuvent être créés ici");
+    public CreateUserResponse create(CreateUserRequest request, Role actorRole) {
+        Role wanted = request.getRole();
+        if (wanted == Role.SUPERADMIN) {
+            throw new IllegalArgumentException("Le rôle Superadmin ne peut pas être créé ici.");
         }
-        if (request.getRole() != Role.OPERATOR && request.getRole() != Role.VIEWER) {
+        if (wanted == Role.ADMIN && actorRole != Role.SUPERADMIN) {
+            throw new IllegalArgumentException("Seul un Superadmin peut créer un administrateur.");
+        }
+        if (wanted != Role.ADMIN && wanted != Role.OPERATOR && wanted != Role.VIEWER) {
             throw new IllegalArgumentException("Rôle invalide");
         }
         if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
@@ -87,6 +91,9 @@ public class UserService {
             user.setFullName(request.getFullName().trim());
         }
         if (request.getRole() != null) {
+            if (request.getRole() == Role.SUPERADMIN || user.getRole() == Role.SUPERADMIN) {
+                throw new IllegalArgumentException("Le rôle Superadmin ne peut pas être modifié ici.");
+            }
             user.setRole(request.getRole());
         }
         if (request.getEnabled() != null) {
@@ -99,9 +106,16 @@ public class UserService {
         return UserResponse.from(userRepository.save(user));
     }
 
-    public void delete(String id) {
-        if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("Utilisateur introuvable");
+    public void delete(String id, Role actorRole, String actorId) {
+        User target = findUser(id);
+        if (id.equals(actorId)) {
+            throw new IllegalArgumentException("Vous ne pouvez pas supprimer votre propre compte.");
+        }
+        if (target.getRole() == Role.SUPERADMIN) {
+            throw new IllegalArgumentException("Le Superadmin ne peut pas être supprimé.");
+        }
+        if (target.getRole() == Role.ADMIN && actorRole != Role.SUPERADMIN) {
+            throw new IllegalArgumentException("Seul un Superadmin peut supprimer un administrateur.");
         }
         userRepository.deleteById(id);
     }

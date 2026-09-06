@@ -6,7 +6,7 @@ export type UserInfo = {
   id: string;
   email: string;
   fullName: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: 'SUPERADMIN' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
   enabled: boolean;
 };
 
@@ -43,6 +43,27 @@ export class AuthService {
         this.isLoggedIn.set(true);
       }),
     );
+  }
+
+  forgotPassword(email: string) {
+    return this.http.post<{ message: string }>('/api/auth/forgot-password', { email });
+  }
+
+  resetPassword(token: string, password: string, confirmPassword: string) {
+    return this.http.post<{ message: string }>('/api/auth/reset-password', {
+      token,
+      password,
+      confirmPassword,
+    });
+  }
+
+  changePassword(email: string, currentPassword: string, password: string, confirmPassword: string) {
+    return this.http.post<{ message: string }>('/api/auth/change-password', {
+      email,
+      currentPassword,
+      password,
+      confirmPassword,
+    });
   }
 
   fetchMe() {

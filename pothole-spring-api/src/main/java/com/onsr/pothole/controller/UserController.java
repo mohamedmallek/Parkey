@@ -4,10 +4,12 @@ import com.onsr.pothole.dto.CreateUserRequest;
 import com.onsr.pothole.dto.CreateUserResponse;
 import com.onsr.pothole.dto.UpdateUserRequest;
 import com.onsr.pothole.dto.UserResponse;
+import com.onsr.pothole.security.UserPrincipal;
 import com.onsr.pothole.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,8 +36,10 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<CreateUserResponse> create(@Valid @RequestBody CreateUserRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(request));
+    public ResponseEntity<CreateUserResponse> create(
+            @Valid @RequestBody CreateUserRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(request, principal.getRole()));
     }
 
     @PatchMapping("/{id}")
@@ -46,8 +50,10 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        userService.delete(id);
+    public ResponseEntity<Void> delete(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        userService.delete(id, principal.getRole(), principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

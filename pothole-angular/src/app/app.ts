@@ -1,5 +1,6 @@
-﻿import { Component, signal, viewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, signal, viewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   ApiService,
@@ -11,6 +12,7 @@ import {
 import { AuthService, type UserInfo } from './auth.service';
 import { EventsMapComponent } from './events-map.component';
 import { EventFrameComponent } from './event-frame.component';
+import { CountUpDirective } from './count-up.directive';
 import {
   ALL_SEVERITIES,
   ALL_STATUSES,
@@ -35,6 +37,7 @@ import {
   repairTypeLabel,
   type RepairMaterial,
 } from './materials.util';
+import { confidencePct, displayLabel, findingLabel, isClearFinding, modelLabel, placeLabel, roleLabel } from './ui-labels';
 
 type AppSection = 'dashboard' | 'detection' | 'live' | 'video' | 'events' | 'gallery' | 'map' | 'users';
 type GalleryPhotoKind = 'all' | 'pothole' | 'signs_damage';
@@ -48,8 +51,8 @@ type GalleryDayGroup = {
 };
 
 @Component({
-  selector: 'app-root',
-  imports: [CommonModule, EventsMapComponent, EventFrameComponent],
+  selector: 'app-main',
+  imports: [CommonModule, EventsMapComponent, EventFrameComponent, CountUpDirective],
   styleUrl: './app.scss',
   templateUrl: './app.html',
 })
@@ -89,14 +92,39 @@ export class App implements OnDestroy {
   protected readonly repairConfidenceLabel = repairConfidenceLabel;
   protected readonly repairMethodLabel = repairMethodLabel;
   protected readonly repairTypeLabel = repairTypeLabel;
+  protected readonly roleLabel = roleLabel;
+  protected readonly displayLabel = displayLabel;
+  protected readonly findingLabel = findingLabel;
+  protected readonly isClearFinding = isClearFinding;
+  protected readonly modelLabel = modelLabel;
+  protected readonly confidencePct = confidencePct;
+  protected readonly placeLabel = placeLabel;
+
+  placeOf(e: { city?: string | null; zone?: string | null; lat?: number | null; lon?: number | null }) {
+    return placeLabel(e);
+  }
+
+  displayName(name?: string | null) {
+    return (name ?? '').replace(/\bONSR\b/gi, '').replace(/\s+/g, ' ').trim();
+  }
+
+  headerLabel() {
+    const name = this.displayName(this.auth.user()?.fullName);
+    const role = this.roleLabel(this.auth.user()?.role);
+    if (!name || name.toLowerCase() === role.toLowerCase()) return '';
+    return name;
+  }
   protected readonly geminiConfigured = signal(false);
   protected readonly materialsLoadingId = signal<string | null>(null);
   protected readonly materialsError = signal('');
-  protected readonly city = signal<string>('Tunis');
-  protected readonly zone = signal<string>('Centre-ville');
+  protected readonly city = signal<string>('');
+  protected readonly zone = signal<string>('');
   protected readonly threshold = signal<number>(0.8);
   protected readonly gpsLoading = signal<boolean>(false);
+  protected readonly placeLoading = signal<boolean>(false);
+  protected readonly gpsAccuracy = signal<number | null>(null);
   protected readonly gpsError = signal<string>('');
+  protected readonly photoInput = viewChild<ElementRef<HTMLInputElement>>('photoInput');
   protected readonly lat = signal<number | null>(null);
   protected readonly lon = signal<number | null>(null);
   protected readonly pendingMapsEvent = signal<EventRecord | null>(null);
@@ -117,7 +145,7 @@ export class App implements OnDestroy {
     { id: 'pothole', title: 'Nids-de-poule', task: 'pothole', kind: 'classifier', ready: true, path: 'models/model.pt' },
     {
       id: 'signs_damage',
-      title: 'Signalétique cassée (détection)',
+      title: 'Panneaux abîmés',
       task: 'signs_damage',
       kind: 'yolo',
       ready: false,
@@ -129,6 +157,17 @@ export class App implements OnDestroy {
   protected readonly fileIsImage = signal<boolean>(false);
   protected readonly loginEmail = signal('');
   protected readonly loginPassword = signal('');
+  protected readonly authScreen = signal<'login' | 'forgot' | 'welcome' | 'change-password'>('login');
+  protected readonly forgotEmail = signal('');
+  protected readonly forgotLoading = signal(false);
+  protected readonly forgotError = signal('');
+  protected readonly forgotMessage = signal('');
+  protected readonly loginSuccess = signal('');
+  protected readonly changeCurrent = signal('');
+  protected readonly changePassword = signal('');
+  protected readonly changeConfirm = signal('');
+  protected readonly changeLoading = signal(false);
+  protected readonly changeError = signal('');
   protected readonly activeSection = signal<AppSection>('dashboard');
   protected readonly liveActive = signal(false);
   protected readonly liveError = signal('');
@@ -155,7 +194,7 @@ export class App implements OnDestroy {
   protected readonly usersSuccess = signal('');
   protected readonly newUserName = signal('');
   protected readonly newUserEmail = signal('');
-  protected readonly newUserRole = signal<'OPERATOR' | 'VIEWER'>('OPERATOR');
+  protected readonly newUserRole = signal<'ADMIN' | 'OPERATOR' | 'VIEWER'>('OPERATOR');
   protected readonly newUserPassword = signal('');
   protected readonly galleryPhotoKind = signal<GalleryPhotoKind>('all');
   protected readonly galleryCollapsedDays = signal<Set<string>>(new Set());
@@ -173,7 +212,15 @@ export class App implements OnDestroy {
   constructor(
     private api: ApiService,
     protected readonly auth: AuthService,
+    private route: ActivatedRoute,
+    private router: Router,
   ) {
+    const params = this.route.snapshot.queryParamMap;
+    const email = (params.get('email') ?? '').trim();
+    if (email) this.loginEmail.set(email);
+    if (params.get('welcome') === '1' && !this.auth.isLoggedIn()) {
+      this.authScreen.set('welcome');
+    }
     if (this.auth.isLoggedIn()) {
       this.initAfterLogin();
     }
@@ -184,11 +231,135 @@ export class App implements OnDestroy {
     this.loginEmail.set('');
     this.loginPassword.set('');
     this.loginError.set('');
+    this.loginSuccess.set('');
+    this.authScreen.set('login');
+    this.forgotEmail.set('');
+    this.forgotError.set('');
+    this.forgotMessage.set('');
+    this.resetChangeForm();
     this.activeSection.set('dashboard');
+  }
+
+  acceptChangePassword() {
+    this.changeError.set('');
+    this.resetChangeForm();
+    this.authScreen.set('change-password');
+    void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+  }
+
+  declineChangePassword() {
+    this.authScreen.set('login');
+    this.loginSuccess.set('Connectez-vous avec le mot de passe reçu par e-mail.');
+    void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+  }
+
+  private resetChangeForm() {
+    this.changeCurrent.set('');
+    this.changePassword.set('');
+    this.changeConfirm.set('');
+    this.changeLoading.set(false);
+    this.changeError.set('');
+  }
+
+  doChangePassword() {
+    const email = this.loginEmail().trim().toLowerCase();
+    const current = this.changeCurrent();
+    const password = this.changePassword();
+    const confirm = this.changeConfirm();
+    this.changeError.set('');
+    if (!email) {
+      this.changeError.set('Indiquez votre adresse e-mail.');
+      return;
+    }
+    if (password.length < 8) {
+      this.changeError.set('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+    if (password !== confirm) {
+      this.changeError.set('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+    this.changeLoading.set(true);
+    this.auth.changePassword(email, current, password, confirm).subscribe({
+      next: (res) => {
+        this.changeLoading.set(false);
+        this.resetChangeForm();
+        this.loginPassword.set('');
+        this.loginSuccess.set(res.message || 'Mot de passe mis à jour. Connectez-vous avec le nouveau.');
+        this.authScreen.set('login');
+      },
+      error: (err) => {
+        this.changeLoading.set(false);
+        this.changeError.set(err?.error?.error ?? 'Impossible de changer le mot de passe. Réessayez.');
+      },
+    });
+  }
+
+  openForgot() {
+    this.forgotEmail.set(this.loginEmail().trim());
+    this.forgotError.set('');
+    this.forgotMessage.set('');
+    this.authScreen.set('forgot');
+  }
+
+  backToLogin() {
+    this.authScreen.set('login');
+    this.forgotError.set('');
+    this.forgotMessage.set('');
+  }
+
+  doForgotPassword() {
+    const email = this.forgotEmail().trim().toLowerCase();
+    this.forgotError.set('');
+    this.forgotMessage.set('');
+    if (!email) {
+      this.forgotError.set('Indiquez votre adresse e-mail.');
+      return;
+    }
+    this.forgotLoading.set(true);
+    this.auth.forgotPassword(email).subscribe({
+      next: (res) => {
+        this.forgotLoading.set(false);
+        this.forgotMessage.set(res.message || 'Si un compte existe, un e-mail vient d’être envoyé.');
+      },
+      error: (err) => {
+        this.forgotLoading.set(false);
+        this.forgotError.set(err?.error?.error ?? 'Impossible d’envoyer le mail. Réessayez.');
+      },
+    });
   }
 
   ngOnDestroy() {
     this.stopLiveCamera();
+  }
+
+  sectionTitle(): string {
+    switch (this.activeSection()) {
+      case 'detection':
+        return 'Analyser une photo';
+      case 'live':
+        return 'Caméra en direct';
+      case 'video':
+        return 'Analyser une vidéo';
+      case 'events':
+        return 'Dossiers';
+      case 'gallery':
+        return 'Photos';
+      case 'map':
+        return 'Carte';
+      case 'users':
+        return 'Équipe';
+      default:
+        return 'Accueil';
+    }
+  }
+
+  setSensitivity(value: string) {
+    this.threshold.set(this.parseNumber(value));
+  }
+
+  setVideoPace(value: string) {
+    this.sampleFps.set(this.parseNumber(value));
   }
 
   setSection(section: AppSection) {
@@ -202,6 +373,9 @@ export class App implements OnDestroy {
     }
     if (section === 'map' || section === 'events') {
       this.refreshEvents();
+    }
+    if (section === 'detection' || section === 'live' || section === 'dashboard') {
+      this.ensureLocation();
     }
     if (section === 'video') {
       const ev = this.mapSeekEvent();
@@ -227,7 +401,22 @@ export class App implements OnDestroy {
 
   canAnalyze() {
     const r = this.auth.user()?.role;
-    return r === 'ADMIN' || r === 'OPERATOR';
+    return r === 'SUPERADMIN' || r === 'ADMIN' || r === 'OPERATOR';
+  }
+
+  canManageTeam() {
+    const r = this.auth.user()?.role;
+    return r === 'SUPERADMIN' || r === 'ADMIN';
+  }
+
+  canCreateAdmin() {
+    return this.auth.user()?.role === 'SUPERADMIN';
+  }
+
+  canDeleteUser(u: UserInfo) {
+    if (u.role === 'SUPERADMIN') return false;
+    if (u.role === 'ADMIN') return this.canCreateAdmin();
+    return this.canManageTeam();
   }
 
   canManageSignalements() {
@@ -402,7 +591,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.galleryDeleting.set(false);
-        this.galleryError.set(err?.error?.error ?? 'Suppression impossible');
+        this.galleryError.set(err?.error?.error ?? 'Impossible de supprimer cette photo.');
       },
     });
   }
@@ -423,7 +612,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.galleryDeleting.set(false);
-        this.galleryError.set(err?.error?.error ?? 'Suppression impossible');
+        this.galleryError.set(err?.error?.error ?? 'Impossible de supprimer cette photo.');
       },
     });
   }
@@ -552,7 +741,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.materialsLoadingId.set(null);
-        this.materialsError.set(err?.error?.error ?? 'Analyse matériaux impossible');
+        this.materialsError.set(err?.error?.error ?? 'Impossible d’estimer les matériaux.');
       },
     });
   }
@@ -582,7 +771,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.statusUpdatingId.set(null);
-        this.eventsError.set(err?.error?.error ?? 'Mise à jour du statut impossible');
+        this.eventsError.set(err?.error?.error ?? 'Impossible de mettre à jour ce dossier.');
       },
     });
   }
@@ -615,6 +804,7 @@ export class App implements OnDestroy {
 
   doLogin() {
     this.loginError.set('');
+    this.loginSuccess.set('');
     this.loginLoading.set(true);
     this.auth.login(this.loginEmail().trim().toLowerCase(), this.loginPassword().trim()).subscribe({
       next: () => {
@@ -623,7 +813,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.loginLoading.set(false);
-        this.loginError.set(err?.error?.error ?? 'Connexion impossible');
+        this.loginError.set(err?.error?.error ?? 'Identifiants incorrects. Réessayez.');
       },
     });
   }
@@ -631,7 +821,14 @@ export class App implements OnDestroy {
   private initAfterLogin() {
     this.api.listModels().subscribe({
       next: (res) => {
-        if (res.models?.length) this.models.set(res.models);
+        if (res.models?.length) {
+          this.models.set(
+            res.models.map((m) => ({
+              ...m,
+              title: m.id === 'signs_damage' ? 'Panneaux abîmés' : m.id === 'pothole' ? 'Nids-de-poule' : displayLabel(m.title),
+            })),
+          );
+        }
         if (res.default) this.selectedModel.set(res.default);
       },
       error: () => {},
@@ -641,9 +838,53 @@ export class App implements OnDestroy {
       next: (s) => this.geminiConfigured.set(!!s.gemini_configured),
       error: () => this.geminiConfigured.set(false),
     });
-    if (this.auth.user()?.role === 'ADMIN') {
+    if (this.canManageTeam()) {
       this.loadUsers();
     }
+    this.useGps();
+  }
+
+  currentPlace() {
+    if (this.gpsLoading() || this.placeLoading()) return 'Recherche de votre position…';
+    return placeLabel({
+      city: this.city(),
+      zone: this.zone(),
+      lat: this.lat(),
+      lon: this.lon(),
+    });
+  }
+
+  placeIsApproximate() {
+    const acc = this.gpsAccuracy();
+    return acc != null && acc > 800;
+  }
+
+  placeAccuracyLabel() {
+    const acc = this.gpsAccuracy();
+    if (acc == null) return '';
+    return `Précision : ${Math.round(acc)} m`;
+  }
+
+  ensureLocation() {
+    if (this.lat() != null && this.lon() != null) {
+      if (!this.city() || !this.zone()) this.fillPlaceFromCoords(this.lat()!, this.lon()!);
+      return;
+    }
+    this.useGps();
+  }
+
+  openPhotoPicker() {
+    this.photoInput()?.nativeElement.click();
+  }
+
+  onPhotoDragOver(e: DragEvent) {
+    e.preventDefault();
+  }
+
+  onPhotoDrop(e: DragEvent) {
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0] ?? null;
+    this.applyPhotoFile(f);
   }
 
   loadUsers() {
@@ -655,7 +896,7 @@ export class App implements OnDestroy {
         this.usersLoading.set(false);
       },
       error: (err) => {
-        this.usersError.set(err?.error?.error ?? 'Impossible de charger les utilisateurs');
+        this.usersError.set(err?.error?.error ?? 'Impossible de charger l’équipe.');
         this.usersLoading.set(false);
       },
     });
@@ -665,16 +906,21 @@ export class App implements OnDestroy {
     const email = this.newUserEmail().trim();
     const fullName = this.newUserName().trim();
     if (!email || !fullName) {
-      this.usersError.set('Nom et email obligatoires');
+      this.usersError.set('Indiquez le nom et l’e-mail.');
       return;
     }
     this.usersSaving.set(true);
     this.usersError.set('');
     this.usersSuccess.set('');
-    const body: { email: string; fullName: string; role: 'OPERATOR' | 'VIEWER'; password?: string } = {
+    const role = this.newUserRole();
+    if (role === 'ADMIN' && !this.canCreateAdmin()) {
+      this.usersError.set('Seul un Superadmin peut créer un administrateur.');
+      return;
+    }
+    const body: { email: string; fullName: string; role: 'ADMIN' | 'OPERATOR' | 'VIEWER'; password?: string } = {
       email,
       fullName,
-      role: this.newUserRole(),
+      role,
     };
     const pwd = this.newUserPassword().trim();
     if (pwd) body.password = pwd;
@@ -683,7 +929,7 @@ export class App implements OnDestroy {
         this.usersSaving.set(false);
         this.usersSuccess.set(
           (res.message ?? 'Compte créé') +
-            ` — connexion avec : ${email} (mot de passe exact de l'email, sans espaces)`,
+            ` — la personne pourra se connecter avec ${email} (mot de passe reçu par e-mail).`,
         );
         this.newUserName.set('');
         this.newUserEmail.set('');
@@ -692,7 +938,7 @@ export class App implements OnDestroy {
       },
       error: (err) => {
         this.usersSaving.set(false);
-        this.usersError.set(err?.error?.error ?? 'Création échouée');
+        this.usersError.set(err?.error?.error ?? 'Impossible de créer le compte.');
       },
     });
   }
@@ -701,7 +947,7 @@ export class App implements OnDestroy {
     if (!confirm('Supprimer cet utilisateur ?')) return;
     this.api.deleteUser(id).subscribe({
       next: () => this.loadUsers(),
-      error: (err) => this.usersError.set(err?.error?.error ?? 'Suppression échouée'),
+      error: (err) => this.usersError.set(err?.error?.error ?? 'Impossible de supprimer ce compte.'),
     });
   }
 
@@ -739,7 +985,7 @@ export class App implements OnDestroy {
   useGps() {
     this.gpsError.set('');
     if (!('geolocation' in navigator)) {
-      this.gpsError.set('Geolocation not supported by this browser.');
+      this.gpsError.set('La localisation n’est pas disponible sur cet appareil.');
       return;
     }
     this.gpsLoading.set(true);
@@ -747,21 +993,140 @@ export class App implements OnDestroy {
       (pos) => {
         this.lat.set(pos.coords.latitude);
         this.lon.set(pos.coords.longitude);
+        this.gpsAccuracy.set(Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null);
         this.gpsLoading.set(false);
+        this.fillPlaceFromCoords(pos.coords.latitude, pos.coords.longitude);
 
         const pending = this.pendingMapsEvent();
         if (pending) {
           this.pendingMapsEvent.set(null);
-          // Now that we have coords, try opening maps again.
           this.openMaps(pending);
         }
       },
-      (err) => {
-        this.gpsError.set(err?.message ? String(err.message) : 'GPS error');
+      () => {
+        this.gpsError.set('Impossible d’obtenir votre position. Autorisez la localisation précise, puis réessayez.');
         this.gpsLoading.set(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
+  }
+
+  private pickAddressPart(address: Record<string, string>, keys: string[], exclude = '') {
+    const skip = exclude.trim().toLowerCase();
+    for (const key of keys) {
+      const value = (address[key] ?? '').trim();
+      if (value && value.toLowerCase() !== skip) return value;
+    }
+    return '';
+  }
+
+  private cleanPlaceName(name: string) {
+    return name
+      .replace(/^Gouvernorat\s+/i, '')
+      .replace(/^Délégation\s+/i, '')
+      .replace(/\bEl\s+/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private tunisiaGovernorate(address: Record<string, string>) {
+    const iso = (address['ISO3166-2-lvl4'] ?? '').toUpperCase();
+    const byIso: Record<string, string> = {
+      'TN-11': 'Tunis',
+      'TN-12': 'Ariana',
+      'TN-13': 'Ben Arous',
+      'TN-14': 'Manouba',
+      'TN-21': 'Nabeul',
+      'TN-22': 'Zaghouan',
+      'TN-23': 'Bizerte',
+      'TN-31': 'Béja',
+      'TN-32': 'Jendouba',
+      'TN-33': 'Le Kef',
+      'TN-34': 'Siliana',
+      'TN-41': 'Kairouan',
+      'TN-42': 'Kasserine',
+      'TN-43': 'Sidi Bouzid',
+      'TN-51': 'Sousse',
+      'TN-52': 'Monastir',
+      'TN-53': 'Mahdia',
+      'TN-61': 'Sfax',
+      'TN-71': 'Gafsa',
+      'TN-72': 'Tozeur',
+      'TN-73': 'Kébili',
+      'TN-81': 'Gabès',
+      'TN-82': 'Médenine',
+      'TN-83': 'Tataouine',
+    };
+    return byIso[iso] || this.cleanPlaceName(address['state'] ?? '');
+  }
+
+  private parsePlace(address: Record<string, string>, fallback = { city: '', zone: '' }) {
+    const code = (address['country_code'] ?? '').toLowerCase();
+    if (code === 'tn') {
+      const city = this.tunisiaGovernorate(address) || this.cleanPlaceName(fallback.city);
+      const quartier = this.cleanPlaceName(
+        address['village'] ||
+          address['town'] ||
+          address['hamlet'] ||
+          address['suburb'] ||
+          address['neighbourhood'] ||
+          address['county'] ||
+          address['state_district'] ||
+          fallback.zone,
+      );
+      return {
+        city,
+        zone: quartier && quartier.toLowerCase() !== city.toLowerCase() ? quartier : this.cleanPlaceName(address['state_district'] ?? ''),
+      };
+    }
+    const city =
+      this.pickAddressPart(address, ['city', 'municipality', 'town', 'county', 'state']) || fallback.city;
+    const zone =
+      this.pickAddressPart(
+        address,
+        ['suburb', 'neighbourhood', 'quarter', 'city_district', 'residential', 'hamlet', 'village', 'road'],
+        city,
+      ) || fallback.zone;
+    return { city, zone };
+  }
+
+  private nominatimUrl(lat: number, lon: number, zoom: number) {
+    return `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}&format=jsonv2&addressdetails=1&zoom=${zoom}&accept-language=fr`;
+  }
+
+  private async readNominatim(lat: number, lon: number, zoom: number) {
+    const res = await fetch(this.nominatimUrl(lat, lon, zoom), { headers: { Accept: 'application/json' } });
+    if (!res.ok) return {} as Record<string, string>;
+    const data = (await res.json()) as { address?: Record<string, string> };
+    return data.address ?? {};
+  }
+
+  private async readBrowserPlace(lat: number, lon: number) {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lon))}&localityLanguage=fr`,
+    );
+    if (!res.ok) return { city: '', zone: '' };
+    const data = (await res.json()) as {
+      city?: string;
+      locality?: string;
+      principalSubdivision?: string;
+    };
+    return {
+      city: this.cleanPlaceName(data.principalSubdivision || data.city || ''),
+      zone: this.cleanPlaceName(data.locality || data.city || ''),
+    };
+  }
+
+  private fillPlaceFromCoords(lat: number, lon: number) {
+    this.placeLoading.set(true);
+    Promise.all([this.readNominatim(lat, lon, 16), this.readBrowserPlace(lat, lon)])
+      .then(([streetAddr, browserPlace]) => {
+        const place = this.parsePlace(streetAddr, browserPlace);
+        this.city.set(place.city);
+        this.zone.set(place.zone && place.zone.toLowerCase() !== place.city.toLowerCase() ? place.zone : browserPlace.zone);
+      })
+      .catch(() => {})
+      .finally(() => this.placeLoading.set(false));
   }
 
   bboxStyle(d: SignDetection) {
@@ -781,18 +1146,21 @@ export class App implements OnDestroy {
   }
 
   onFile(e: Event) {
+    const input = e.target as HTMLInputElement;
+    this.applyPhotoFile(input.files?.[0] ?? null);
+  }
+
+  applyPhotoFile(f: File | null) {
     this.error.set('');
     this.result.set(null);
     this.detections.set([]);
 
-    const input = e.target as HTMLInputElement;
-    const f = input.files?.[0] ?? null;
     this.file.set(f);
     this.fileIsImage.set(f ? this.isImageFile(f) : false);
 
     if (f && !this.isImageFile(f)) {
       this.error.set(
-        'Ce fichier est une vidéo ou un format non supporté. Pour une vidéo, descendez à « Analyse séquentielle ».',
+        'Ce fichier n’est pas une photo. Pour une vidéo, ouvrez « Analyser une vidéo ».',
       );
     }
 
@@ -810,7 +1178,7 @@ export class App implements OnDestroy {
     const f = this.file();
     if (!f) return;
     if (!this.isImageFile(f)) {
-      this.error.set('Choisissez une photo (JPG/PNG), pas une vidéo MP4.');
+      this.error.set('Choisissez une photo, pas une vidéo.');
       return;
     }
 
@@ -857,25 +1225,21 @@ export class App implements OnDestroy {
   formatApiError(err: unknown): string {
     const e = err as { error?: unknown; message?: string; status?: number };
     if (err && typeof err === 'object' && 'name' in err && (err as { name: string }).name === 'TimeoutError') {
-      return 'Timeout';
+      return 'L’analyse a pris trop de temps. Réessayez avec un fichier plus court.';
     }
     if (e?.error && typeof e.error === 'object' && e.error !== null && 'error' in e.error) {
       return String((e.error as { error: string }).error);
     }
     if (typeof e?.error === 'string') {
       if (e.error.includes('<!doctype') || e.error.includes('<html')) {
-        return 'Erreur serveur (500). Vérifiez que vous envoyez une image JPG/PNG, pas une vidéo.';
+        return 'Une erreur s’est produite. Vérifiez que le fichier est bien une photo.';
       }
       return e.error.slice(0, 500);
     }
     if (e?.error && typeof e.error === 'object') {
-      try {
-        return JSON.stringify(e.error);
-      } catch {
-        return 'Erreur API';
-      }
+      return 'Une erreur s’est produite. Réessayez dans un instant.';
     }
-    return e?.message ? String(e.message) : 'Erreur inconnue';
+    return e?.message ? String(e.message) : 'Une erreur inattendue s’est produite.';
   }
 
   onVideoMetadata() {
@@ -926,9 +1290,12 @@ export class App implements OnDestroy {
   }
 
   coordLabel(e: EventRecord) {
-    if (e.lat != null && e.lon != null) return `${e.lat}, ${e.lon}`;
-    if (this.lat() != null && this.lon() != null) return `GPS appareil: ${this.lat()}, ${this.lon()}`;
-    return '— (activez GPS ou OCR sur la vidéo)';
+    return placeLabel({
+      city: e.city,
+      zone: e.zone,
+      lat: e.lat ?? this.lat(),
+      lon: e.lon ?? this.lon(),
+    });
   }
 
   timeLabel(e: EventRecord) {
@@ -936,7 +1303,7 @@ export class App implements OnDestroy {
     const s = Math.floor(ms / 1000);
     const m = Math.floor(s / 60);
     const rs = s % 60;
-    return `Moment: ${m}:${rs.toString().padStart(2, '0')} (${ms} ms)`;
+    return `À ${m}:${rs.toString().padStart(2, '0')}`;
   }
 
   analyzeVideo() {
@@ -969,15 +1336,15 @@ export class App implements OnDestroy {
           if ((res.events ?? []).length) this.events.set([...(res.events ?? []), ...this.events()].slice(0, 200));
           if (!res.events?.length) {
             this.videoError.set(
-              'Aucune alerte sur toute la vidéo. Baissez le seuil (ex. 0.5) ou testez un autre modèle.',
+              'Aucun problème trouvé sur cette vidéo. Essayez une sensibilité plus élevée ou un autre type de contrôle.',
             );
           }
         },
         error: (err) => {
           const msg = this.formatApiError(err);
-          if (msg.includes('Timeout') || msg.includes('timeout')) {
+          if (msg.includes('trop de temps') || msg.toLowerCase().includes('timeout')) {
             this.videoError.set(
-              'Délai dépassé. Réduisez max images à 50, FPS à 0.5, ou testez un extrait de 1–2 min.',
+              'L’analyse a pris trop de temps. Essayez un extrait plus court, ou choisissez l’option « Rapide ».',
             );
           } else {
             this.videoError.set(msg);
@@ -996,7 +1363,7 @@ export class App implements OnDestroy {
     const lon = e.lon ?? this.lon();
     if (lat == null || lon == null) {
       this.pendingMapsEvent.set(e);
-      this.gpsError.set('Veuillez autoriser le GPS (puis je vais ouvrir Google Maps automatiquement).');
+      this.gpsError.set('Autorisez la localisation : la carte s’ouvrira ensuite automatiquement.');
       this.useGps();
       return;
     }
@@ -1024,7 +1391,7 @@ export class App implements OnDestroy {
       error: (err) => {
         const msg =
           err?.error ? JSON.stringify(err.error) : err?.message ? String(err.message) : String(err);
-        this.eventsError.set(msg);
+        this.eventsError.set('Impossible de charger les dossiers. Réessayez.');
         this.eventsLoading.set(false);
       },
     });
@@ -1036,6 +1403,16 @@ export class App implements OnDestroy {
     } catch {
       return String(ts);
     }
+  }
+
+  tableDate(ts?: number | null) {
+    if (ts == null) return '—';
+    return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  tableTime(ts?: number | null) {
+    if (ts == null) return '';
+    return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   }
 
   private downloadBlob(blob: Blob, filename: string) {
@@ -1058,7 +1435,7 @@ export class App implements OnDestroy {
   async startLiveCamera() {
     this.liveError.set('');
     if (!navigator.mediaDevices?.getUserMedia) {
-      this.liveError.set('Votre navigateur ne supporte pas l’accès à la caméra.');
+      this.liveError.set('Votre navigateur ne peut pas ouvrir la caméra.');
       return;
     }
     try {
@@ -1080,7 +1457,7 @@ export class App implements OnDestroy {
       this.startLiveLoop();
       setTimeout(() => this.captureLiveFrame(), 800);
     } catch (err) {
-      this.liveError.set(err instanceof Error ? err.message : 'Accès caméra refusé');
+      this.liveError.set('Accès à la caméra refusé. Autorisez-le dans le navigateur, puis réessayez.');
       this.liveActive.set(false);
     }
   }

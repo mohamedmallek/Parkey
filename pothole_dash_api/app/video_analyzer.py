@@ -12,7 +12,7 @@ from PIL import Image
 
 from app.inference import LoadedModel, predict_bytes
 from app.ocr_coords import parse_lat_lon
-from app.yolo_detection import detect_bytes, is_damaged_label
+from app.yolo_detection import detect_damaged_signs
 
 
 @dataclass(frozen=True)
@@ -201,15 +201,9 @@ def analyze_video_signs_yolo(
 
         jpg_bytes = _encode_jpg_bgr(frame)
         try:
-            raw_dets, _w, _h = detect_bytes(model_path, jpg_bytes, conf=threshold)
+            hits, _w, _h = detect_damaged_signs(model_path, jpg_bytes)
         except Exception:
             continue
-
-        hits = [
-            d
-            for d in raw_dets
-            if is_damaged_label(d["label"]) and float(d["conf"]) >= threshold
-        ]
         if not hits:
             continue
 
@@ -313,14 +307,9 @@ def analyze_video_combined(
 
         if signs_model_path and os.path.exists(signs_model_path):
             try:
-                raw_dets, _w, _h = detect_bytes(signs_model_path, jpg_bytes, conf=signs_threshold)
+                hits, _w, _h = detect_damaged_signs(signs_model_path, jpg_bytes)
             except Exception:
-                raw_dets = []
-            hits = [
-                d
-                for d in raw_dets
-                if is_damaged_label(d["label"]) and float(d["conf"]) >= signs_threshold
-            ]
+                hits = []
             if hits:
                 annotated = _draw_sign_boxes(frame, hits)
                 jpg_out = _encode_jpg_bgr(annotated)

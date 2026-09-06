@@ -2,16 +2,23 @@ export type PotholeSizeClass = 'S' | 'M' | 'L' | 'XL';
 export type DepthProxy = 'FAIBLE' | 'MOYENNE' | 'PROFONDE';
 
 const SIZE_LABELS: Record<PotholeSizeClass, string> = {
-  S: 'Petit (S) — < 15 cm',
-  M: 'Moyen (M) — 15–30 cm',
-  L: 'Grand (L) — 30–50 cm',
-  XL: 'Très grand (XL) — ≥ 50 cm',
+  S: 'Petit — moins de 15 cm',
+  M: 'Moyen — 15 à 30 cm',
+  L: 'Grand — 30 à 50 cm',
+  XL: 'Très grand — plus de 50 cm',
+};
+
+const SIZE_SHORT: Record<PotholeSizeClass, string> = {
+  S: 'Petit',
+  M: 'Moyen',
+  L: 'Grand',
+  XL: 'Très grand',
 };
 
 const DEPTH_LABELS: Record<DepthProxy, string> = {
-  FAIBLE: 'Profondeur faible (proxy)',
-  MOYENNE: 'Profondeur moyenne (proxy)',
-  PROFONDE: 'Profondeur élevée (proxy)',
+  FAIBLE: 'Peu profond',
+  MOYENNE: 'Profondeur moyenne',
+  PROFONDE: 'Assez profond',
 };
 
 export function sizeClassLabel(c?: string | null): string {
@@ -21,7 +28,7 @@ export function sizeClassLabel(c?: string | null): string {
 
 export function sizeClassShort(c?: string | null): string {
   if (!c) return '—';
-  return c;
+  return SIZE_SHORT[c as PotholeSizeClass] ?? c;
 }
 
 export function sizeClassCss(c?: string | null): string {

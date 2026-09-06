@@ -8,7 +8,6 @@ public class AppProperties {
     private Jwt jwt = new Jwt();
     private Cors cors = new Cors();
     private Ml ml = new Ml();
-    private Admin admin = new Admin();
     private Mail mail = new Mail();
 
     public Jwt getJwt() {
@@ -33,14 +32,6 @@ public class AppProperties {
 
     public void setMl(Ml ml) {
         this.ml = ml;
-    }
-
-    public Admin getAdmin() {
-        return admin;
-    }
-
-    public void setAdmin(Admin admin) {
-        this.admin = admin;
     }
 
     public Mail getMail() {
@@ -93,36 +84,6 @@ public class AppProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
-        }
-    }
-
-    public static class Admin {
-        private String email;
-        private String password;
-        private String fullName;
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public String getFullName() {
-            return fullName;
-        }
-
-        public void setFullName(String fullName) {
-            this.fullName = fullName;
         }
     }
 

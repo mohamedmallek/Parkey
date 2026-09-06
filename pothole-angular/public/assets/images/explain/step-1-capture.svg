@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="102.00,162.00 172.00,159.00 197.00,184.50 127.00,187.50" fill="#33414f"/><line x1="131.0" y1="163.5" x2="168.0" y2="163.0" stroke="#e7ecf1" stroke-width="4" stroke-linecap="round"/><line x1="146.0" y1="178.0" x2="181.0" y2="177.5" stroke="#e7ecf1" stroke-width="4" stroke-linecap="round"/><line x1="160.0" y1="191.0" x2="180.0" y2="190.0" stroke="#e7ecf1" stroke-width="4" stroke-linecap="round"/><polygon points="156.00,173.00 164.00,173.00 168.50,176.75 166.00,180.50 157.50,181.25 151.50,177.25" fill="#1a2332"/><circle cx="160.0" cy="177.0" r="15" fill="none" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="3 3" opacity="0.8"/>
+    <path d="M238,90 L239.68,94.32 L244,96 L239.68,97.68 L238,102 L236.32,97.68 L232,96 L236.32,94.32 Z" fill="#fde900"/>
+<path d="M250,114 L251.12,116.88 L254,118 L251.12,119.12 L250,122 L248.88,119.12 L246,118 L248.88,116.88 Z" fill="#fde900"/>
+    
+    <ellipse cx="160" cy="128" rx="22.5" ry="6.6" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="92" r="37" fill="none" stroke="#2dbee6" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="92" r="30" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,92)">
+    <circle cx="0" cy="0" r="18.5" fill="none" stroke="#1a2332" stroke-width="2" opacity="0.35"/>
+    <path d="M5.5,0.0 L15.7,-2.9 L14.5,6.8 Z" fill="#1a2332" opacity="0.88"/><path d="M2.8,4.8 L10.4,12.2 L1.3,15.9 Z" fill="#1a2332" opacity="0.88"/><path d="M-2.7,4.8 L-5.4,15.1 L-13.1,9.1 Z" fill="#1a2332" opacity="0.88"/><path d="M-5.5,0.0 L-15.7,2.9 L-14.5,-6.8 Z" fill="#1a2332" opacity="0.88"/><path d="M-2.8,-4.8 L-10.4,-12.2 L-1.3,-15.9 Z" fill="#1a2332" opacity="0.88"/><path d="M2.8,-4.8 L5.4,-15.1 L13.1,-9.1 Z" fill="#1a2332" opacity="0.88"/>
+    <circle cx="0" cy="0" r="4.6" fill="#2dbee6"/>
+    </g>
+    
+    
+    <circle cx="46" cy="46" r="22" fill="#1a2332"/>
+    <text x="46" y="54" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          text-anchor="middle" fill="#fff">1</text>
+    
+    
+</svg>

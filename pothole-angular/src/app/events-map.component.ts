@@ -31,6 +31,7 @@ import {
   sizeClassLabel,
   sizeClassShort,
 } from './pothole-size.util';
+import { confidencePct, displayLabel, findingLabel, isClearFinding, modelLabel } from './ui-labels';
 
 type MapPoint = {
   event: EventRecord;
@@ -78,6 +79,11 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
   protected readonly severityCssClass = severityCssClass;
   protected readonly sizeClassLabel = sizeClassLabel;
   protected readonly sizeClassShort = sizeClassShort;
+  protected readonly displayLabel = displayLabel;
+  protected readonly findingLabel = findingLabel;
+  protected readonly isClearFinding = isClearFinding;
+  protected readonly confidencePct = confidencePct;
+  protected readonly modelLabel = modelLabel;
   protected readonly sizeClassCss = sizeClassCss;
   protected readonly formatSizeCm = formatSizeCm;
   protected readonly isPotholeEvent = isPotholeEvent;
@@ -206,11 +212,6 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
     return event.video_ts_ms != null || !!event.frame_path;
   }
 
-  modelLabel(model?: string | null): string {
-    if (model === 'signs_damage') return 'Signalétique';
-    if (model === 'pothole') return 'Nid-de-poule';
-    return model ?? '—';
-  }
 
   private loadFrame(event: EventRecord): void {
     this.revokeFrameUrl();
@@ -344,12 +345,12 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
 
   private popupHtml(p: MapPoint): string {
     const e = p.event;
-    const alert = e.alert ? '<span style="color:#dc2626;font-weight:600">ALERTE</span>' : 'Normal';
-    const loc = p.approximate ? `~${e.city ?? 'ville'}` : `${e.lat!.toFixed(5)}, ${e.lon!.toFixed(5)}`;
+    const alert = e.alert ? '<span style="color:#dc2626;font-weight:600">À traiter</span>' : 'Rien à signaler';
+    const loc = p.approximate ? `Près de ${e.city ?? 'la ville'}` : 'Position enregistrée';
     return `
       <div class="map-popup">
-        <strong>${this.escapeHtml(e.label)}</strong>
-        <div>${this.modelLabel(e.model)} · ${(e.prob * 100).toFixed(1)}%</div>
+        <strong>${this.escapeHtml(displayLabel(e.label))}</strong>
+        <div>${this.escapeHtml(modelLabel(e.model))} · ${this.escapeHtml(confidencePct(e.prob))}</div>
         <div style="font-size:12px;color:#64748b">${this.escapeHtml(this.formatDateFn()(e.ts_ms))}</div>
         <div style="font-size:12px">${alert} · ${this.escapeHtml(loc)}</div>
       </div>`;

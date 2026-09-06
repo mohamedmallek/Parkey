@@ -15,13 +15,14 @@ def _load_local_env() -> None:
             continue
         key, _, value = line.partition("=")
         key, value = key.strip(), value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        if key:
             os.environ[key] = value
 
 
 _load_local_env()
 
 from flask import Flask, jsonify, request, send_file
+from werkzeug.exceptions import HTTPException
 from flask_cors import CORS
 
 from app.inference import predict_bytes
@@ -31,7 +32,7 @@ from app.video_analyzer import (
     analyze_video_file,
     analyze_video_signs_yolo,
 )
-from app.yolo_detection import detect_bytes, is_damaged_label
+from app.yolo_detection import detect_damaged_signs
 from app.pothole_sizing import enrich_pothole_event
 from app.repair_materials import analyze_repair_materials, enrich_event_repair_materials
 
@@ -109,6 +110,13 @@ def _save_uploaded_video(tmp_dir: Path) -> str:
 @app.get("/health")
 def health():
     return jsonify({"ok": True})
+
+
+@app.errorhandler(Exception)
+def _json_error(exc):
+    if isinstance(exc, HTTPException):
+        return exc
+    return jsonify({"error": f"Analyse interrompue : {exc}"}), 500
 
 
 @app.get("/models")
@@ -205,14 +213,14 @@ def predict():
             "classes": loaded.classes,
             "event": evt,
         }
-    if evt.get("size_class"):
+    if evt.get("size_class") or evt.get("bbox_norm"):
         resp["size_estimate"] = {
-            "size_class": evt["size_class"],
-            "width_cm_est": evt["width_cm_est"],
-            "length_cm_est": evt["length_cm_est"],
+            "size_class": evt.get("size_class"),
+            "width_cm_est": evt.get("width_cm_est"),
+            "length_cm_est": evt.get("length_cm_est"),
             "max_dim_cm_est": evt.get("max_dim_cm_est"),
-            "depth_proxy": evt["depth_proxy"],
-            "depth_score": evt["depth_score"],
+            "depth_proxy": evt.get("depth_proxy"),
+            "depth_score": evt.get("depth_score"),
             "calibration": evt.get("size_calibration"),
             "bbox_norm": evt.get("bbox_norm"),
         }
@@ -232,7 +240,7 @@ def _predict_signs_damage(model_id, meta, f, img_bytes, common, threshold):
         ), 400
 
     try:
-        raw_dets, img_w, img_h = detect_bytes(path, img_bytes, conf=threshold)
+        raw_dets, img_w, img_h = detect_damaged_signs(path, img_bytes)
     except ImportError as e:
         return jsonify({"error": str(e)}), 500
     except Exception as e:
@@ -251,11 +259,6 @@ def _predict_signs_damage(model_id, meta, f, img_bytes, common, threshold):
     detections = []
     events = []
     for d in raw_dets:
-        damaged = is_damaged_label(d["label"])
-        if not damaged:
-            continue
-        if float(d["conf"]) < threshold:
-            continue
 
         street = {
             "lat": lat,
@@ -297,7 +300,7 @@ def _predict_signs_damage(model_id, meta, f, img_bytes, common, threshold):
         _append_event(evt)
         events.append(evt)
 
-    best_label = detections[0]["label"] if detections else "none"
+    best_label = detections[0]["label"] if detections else "ok"
     best_prob = detections[0]["conf"] if detections else 0.0
 
     return jsonify(
@@ -487,7 +490,7 @@ def materials_status():
     return jsonify(
         {
             "gemini_configured": bool(key),
-            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),
             "analysis_type": "repair_materials",
         }
     )

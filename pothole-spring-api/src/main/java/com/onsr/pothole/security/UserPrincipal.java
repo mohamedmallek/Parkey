@@ -23,6 +23,11 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (user.getRole() == Role.SUPERADMIN) {
+            return List.of(
+                    new SimpleGrantedAuthority("ROLE_SUPERADMIN"),
+                    new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
 

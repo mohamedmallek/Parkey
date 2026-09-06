@@ -12,19 +12,23 @@ public final class SeverityUtil {
         double p = prob != null ? prob : 0.0;
         boolean a = Boolean.TRUE.equals(alert);
 
+        if (!a) {
+            return "FAIBLE";
+        }
+
         if (sizeClass != null) {
             if ("XL".equalsIgnoreCase(sizeClass)) {
                 return "CRITIQUE";
             }
-            if ("L".equalsIgnoreCase(sizeClass) && (a || p >= 0.5)) {
+            if ("L".equalsIgnoreCase(sizeClass) && p >= 0.5) {
                 return "CRITIQUE";
             }
         }
 
-        if (a && p >= 0.85) {
+        if (p >= 0.85) {
             return "CRITIQUE";
         }
-        if (a || p >= 0.7) {
+        if (p >= 0.7) {
             return "ELEVEE";
         }
         if ("M".equalsIgnoreCase(sizeClass) && p >= 0.5) {

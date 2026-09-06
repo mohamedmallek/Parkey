@@ -237,7 +237,7 @@ export class ApiService {
     return this.http.get<{ users: UserInfo[] }>('/api/users');
   }
 
-  createUser(body: { email: string; fullName: string; role: 'OPERATOR' | 'VIEWER'; password?: string }) {
+  createUser(body: { email: string; fullName: string; role: 'ADMIN' | 'OPERATOR' | 'VIEWER'; password?: string }) {
     return this.http.post<{ user: UserInfo; emailSent: boolean; message: string }>('/api/users', body);
   }
 

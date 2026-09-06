@@ -14,22 +14,63 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
+DEFAULT_GEMINI_FALLBACKS = "gemini-3.5-flash-lite,gemini-3.6-flash,gemini-flash-latest"
+
+
 def _gemini_api_key() -> str:
     return os.environ.get("GEMINI_API_KEY", "").strip()
 
 
+def _is_retired_model(name: str) -> bool:
+    n = name.lower().strip()
+    return n.startswith("gemini-1.5") or n.startswith("gemini-2.0")
+
+
 def _gemini_models() -> List[str]:
-    primary = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-lite").strip()
-    fallbacks = os.environ.get(
-        "GEMINI_MODEL_FALLBACKS",
-        "gemini-2.0-flash-lite,gemini-1.5-flash,gemini-1.5-flash-8b",
-    )
+    primary = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip()
+    fallbacks = os.environ.get("GEMINI_MODEL_FALLBACKS", DEFAULT_GEMINI_FALLBACKS)
     chain: List[str] = []
     for m in [primary, *fallbacks.split(",")]:
         m = m.strip()
-        if m and m not in chain:
+        if m and m not in chain and not _is_retired_model(m):
             chain.append(m)
+    if not chain:
+        chain = [DEFAULT_GEMINI_MODEL, *[x.strip() for x in DEFAULT_GEMINI_FALLBACKS.split(",") if x.strip()]]
     return chain
+
+
+def _is_model_unavailable(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return (
+        "404" in msg
+        or "not found" in msg
+        or "is not supported" in msg
+        or "no longer available" in msg
+    )
+
+
+def _live_flash_models() -> List[str]:
+    """Modèles Flash encore acceptés par generateContent (catalogue Google)."""
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=_gemini_api_key())
+        names: List[str] = []
+        for model in genai.list_models():
+            methods = getattr(model, "supported_generation_methods", None) or []
+            if "generateContent" not in methods:
+                continue
+            name = str(getattr(model, "name", "") or "").replace("models/", "")
+            if not name or _is_retired_model(name):
+                continue
+            if "flash" not in name or "image" in name or "tts" in name:
+                continue
+            if name not in names:
+                names.append(name)
+        return names
+    except Exception:
+        return []
 
 
 RULES_DISCLAIMER = (
@@ -225,6 +266,8 @@ def _friendly_gemini_error(exc: Exception) -> str:
             "Quota Gemini épuisé (gratuit). Barème ONSR utilisé à la place. "
             "Réessayez plus tard ou activez la facturation sur Google AI Studio."
         )
+    if _is_model_unavailable(exc):
+        return "Gemini indisponible : le modèle configuré n’est plus proposé. Réessayez après mise à jour."
     return f"Gemini indisponible : {str(exc)[:200]}"
 
 
@@ -270,7 +313,14 @@ def _call_gemini(image_bytes: bytes, meta: Dict[str, Any]) -> Tuple[Optional[Dic
     image_part = {"mime_type": mime, "data": base64.b64encode(image_bytes).decode("ascii")}
 
     last_err: Optional[str] = None
-    for model_name in _gemini_models():
+    tried: set[str] = set()
+    queue = _gemini_models()
+    listed_live = False
+    while queue:
+        model_name = queue.pop(0)
+        if model_name in tried:
+            continue
+        tried.add(model_name)
         try:
             model = genai.GenerativeModel(model_name)
             response = model.generate_content([prompt, image_part])
@@ -305,6 +355,9 @@ def _call_gemini(image_bytes: bytes, meta: Dict[str, Any]) -> Tuple[Optional[Dic
             last_err = str(exc)
             if _is_quota_error(exc):
                 time.sleep(1)
+            if _is_model_unavailable(exc) and not listed_live:
+                listed_live = True
+                queue.extend([name for name in _live_flash_models() if name not in tried])
             continue
     return None, last_err
 

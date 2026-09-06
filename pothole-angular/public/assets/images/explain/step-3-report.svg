@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="156.50,149.75 177.50,160.25 164.00,167.00 143.00,156.50" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="143.00,164.50 143.00,156.50 164.00,167.00 164.00,175.00" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="177.50,168.25 177.50,160.25 164.00,167.00 164.00,175.00" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="156.50,139.75 177.50,150.25 164.00,157.00 143.00,146.50" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="143.00,154.50 143.00,146.50 164.00,157.00 164.00,165.00" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="177.50,158.25 177.50,150.25 164.00,157.00 164.00,165.00" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="156.50,129.75 177.50,140.25 164.00,147.00 143.00,136.50" fill="#8fe0f5" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="143.00,144.50 143.00,136.50 164.00,147.00 164.00,155.00" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="177.50,148.25 177.50,140.25 164.00,147.00 164.00,155.00" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M238,90 L239.68,94.32 L244,96 L239.68,97.68 L238,102 L236.32,97.68 L232,96 L236.32,94.32 Z" fill="#fde900"/>
+<path d="M250,114 L251.12,116.88 L254,118 L251.12,119.12 L250,122 L248.88,119.12 L246,118 L248.88,116.88 Z" fill="#fde900"/>
+    
+    <ellipse cx="160" cy="126" rx="22.5" ry="6.6" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="90" r="37" fill="none" stroke="#e6d200" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="90" r="30" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,90)">
+    <path d="M-13,-16 L6,-16 L13,-9 L13,16 A2,2 0 0 1 11,18 L-13,18 A2,2 0 0 1 -15,16 L-15,-14 A2,2 0 0 1 -13,-16 Z"
+          fill="#fff" stroke="#1a2332" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M6,-16 L6,-9 L13,-9 Z" fill="none" stroke="#1a2332" stroke-width="2"/>
+    <line x1="-9" y1="-2" x2="7" y2="-2" stroke="#1a2332" stroke-width="1.8" opacity="0.6"/>
+    <line x1="-9" y1="3" x2="2" y2="3" stroke="#1a2332" stroke-width="1.8" opacity="0.6"/>
+    <circle cx="6" cy="11" r="7" fill="#c0392b" stroke="#1a2332" stroke-width="1.4"/>
+    <path d="M6,7.5 C8.5,7.5 10,9.3 10,11.2 C10,13.6 6,16 6,16 C6,16 2,13.6 2,11.2 C2,9.3 3.5,7.5 6,7.5 Z" fill="#fff"/>
+    </g>
+    
+    
+    <circle cx="46" cy="46" r="22" fill="#1a2332"/>
+    <text x="46" y="54" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          text-anchor="middle" fill="#fff">3</text>
+    
+    
+</svg>

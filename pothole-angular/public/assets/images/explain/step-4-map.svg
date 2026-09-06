@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="160.00,154.00 178.00,163.00 160.00,172.00 142.00,163.00" fill="#e3f6fb" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="142.00,168.00 142.00,163.00 160.00,172.00 160.00,177.00" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="178.00,168.00 178.00,163.00 160.00,172.00 160.00,177.00" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M151.0,163.5 Q160,160 169.0,163.5" fill="none" stroke="#2dbee6" stroke-width="2.6" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="151.0" cy="163.5" r="3.4" fill="#1a2332"/><g transform="translate(169.0,153.5) scale(0.55)">
+    <path d="M0,-16 L15,-10 L15,3 C15,12 8,17 0,20 C-8,17 -15,12 -15,3 L-15,-10 Z"
+          fill="#1f7a4d" stroke="#1a2332" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M-6,1 L-1.5,7 L8,-6" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    
+    <ellipse cx="160" cy="126" rx="22.5" ry="6.6" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="90" r="37" fill="none" stroke="#1f7a4d" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="90" r="30" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,90)">
+    <rect x="-19" y="-14" width="38" height="28" rx="3" fill="none" stroke="#1a2332" stroke-width="2.4"/>
+    <path d="M-14,10 C-8,-4 2,14 14,-8" fill="none" stroke="#2dbee6" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 6"/>
+    <circle cx="-14" cy="10" r="2.6" fill="#1a2332"/>
+    <circle cx="14" cy="-8" r="3.4" fill="#c0392b" stroke="#1a2332" stroke-width="1.2"/>
+    </g>
+    
+    
+    <circle cx="46" cy="46" r="22" fill="#1a2332"/>
+    <text x="46" y="54" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700"
+          text-anchor="middle" fill="#fff">4</text>
+    
+    
+</svg>

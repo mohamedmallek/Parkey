@@ -16,7 +16,7 @@
 ```powershell
 # PowerShell
 $env:GEMINI_API_KEY = "votre-cle-api"
-$env:GEMINI_MODEL = "gemini-2.0-flash"   # optionnel
+$env:GEMINI_MODEL = "gemini-3.5-flash"   # optionnel
 python api.py
 ```
 

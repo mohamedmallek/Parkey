@@ -33,10 +33,6 @@ app:
     allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
   ml:
     base-url: ${ML_SERVICE_URL:http://127.0.0.1:5000}
-  admin:
-    email: ${ADMIN_EMAIL:admin@onsr.local}
-    password: ${ADMIN_PASSWORD:Admin123!}
-    full-name: ${ADMIN_FULL_NAME:Administrateur ONSR}
   mail:
     enabled: ${MAIL_ENABLED:true}
     from: ${MAIL_FROM:${SMTP_USER:noreply@onsr.local}}

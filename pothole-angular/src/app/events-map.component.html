@@ -2,41 +2,41 @@
   <div class="map-toolbar">
     <div class="map-stats">
       <span class="chip-stat"><i class="bi bi-geo-alt"></i> {{ stats().onMap }} / {{ stats().total }} sur la carte</span>
-      <span class="chip-stat chip-alert"><i class="bi bi-exclamation-triangle"></i> {{ stats().alerts }} alertes</span>
+      <span class="chip-stat chip-alert"><i class="bi bi-exclamation-triangle"></i> {{ stats().alerts }} à traiter</span>
       @if (stats().approximate > 0) {
-        <span class="chip-stat chip-approx"><i class="bi bi-pin-map"></i> {{ stats().approximate }} position ville</span>
+        <span class="chip-stat chip-approx"><i class="bi bi-pin-map"></i> {{ stats().approximate }} près du centre-ville</span>
       }
     </div>
     <div class="map-controls">
       <select class="map-select" [value]="filterModel()" (change)="filterModel.set($any($event.target).value)">
-        <option value="all">Tous les modèles</option>
+        <option value="all">Tous les types</option>
         <option value="pothole">Nids-de-poule</option>
-        <option value="signs_damage">Signalétique</option>
+        <option value="signs_damage">Panneaux</option>
       </select>
       <label class="map-toggle">
         <input type="checkbox" [checked]="alertsOnly()" (change)="alertsOnly.set($any($event.target).checked)" />
-        Alertes seulement
+        À traiter seulement
       </label>
       <label class="map-toggle">
         <input type="checkbox" [checked]="showHeatmap()" (change)="toggleHeatmap()" />
-        Heatmap
+        Zones denses
       </label>
       <label class="map-toggle">
         <input type="checkbox" [checked]="showMarkers()" (change)="toggleMarkers()" />
-        Marqueurs
+        Points
       </label>
-      <button type="button" class="btn btn-secondary btn-sm" (click)="fitBounds()"><i class="bi bi-fullscreen"></i> Ajuster</button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="fitBounds()"><i class="bi bi-fullscreen"></i> Tout voir</button>
       <button type="button" class="btn btn-secondary btn-sm" (click)="refresh.emit()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
     </div>
   </div>
 
   <div class="map-layout">
-    <div #mapContainer class="map-container" role="application" aria-label="Carte des anomalies routières"></div>
+    <div #mapContainer class="map-container" role="application" aria-label="Carte des routes"></div>
 
     @if (selected(); as point) {
       <aside class="map-detail">
         <div class="map-detail-head">
-          <h3>Détail anomalie</h3>
+          <h3>Détail</h3>
           <button type="button" class="btn-close-detail" (click)="clearSelection()" aria-label="Fermer">&times;</button>
         </div>
 
@@ -50,11 +50,11 @@
           <div class="detail-row">
             <span class="detail-label">Type</span>
             <span class="badge" [class.badge-alert]="point.event.alert" [class.badge-ok]="!point.event.alert">
-              {{ point.event.label }}
+              {{ findingLabel(point.event) }}
             </span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Modèle</span>
+            <span class="detail-label">Contrôle</span>
             <span>{{ modelLabel(point.event.model) }}</span>
           </div>
           <div class="detail-row">
@@ -63,7 +63,11 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Gravité</span>
-            <span class="severity-pill" [class]="severityCssClass(point.event.severity)">{{ severityLabel(point.event.severity) }}</span>
+            @if (isClearFinding(point.event)) {
+              <span class="muted">—</span>
+            } @else {
+              <span class="severity-pill" [class]="severityCssClass(point.event.severity)">{{ severityLabel(point.event.severity) }}</span>
+            }
           </div>
           @if (isPotholeEvent(point.event) && point.event.size_class) {
             <div class="detail-row">
@@ -80,8 +84,8 @@
             </div>
           }
           <div class="detail-row">
-            <span class="detail-label">Confiance</span>
-            <span>{{ point.event.prob * 100 | number:'1.1-1' }}%</span>
+            <span class="detail-label">Fiabilité</span>
+            <span>{{ confidencePct(point.event.prob) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Date</span>
@@ -91,9 +95,9 @@
             <span class="detail-label">Localisation</span>
             <span>
               @if (point.approximate) {
-                ~{{ point.event.city ?? 'ville' }} (approx.)
+                Près de {{ point.event.city ?? 'la ville' }}
               } @else {
-                {{ point.lat | number:'1.5-5' }}, {{ point.lon | number:'1.5-5' }}
+                Position enregistrée
               }
             </span>
           </div>
@@ -105,8 +109,8 @@
           }
           @if (point.event.ocr_text) {
             <div class="detail-row">
-              <span class="detail-label">OCR</span>
-              <span class="mono ocr-text">{{ point.event.ocr_text }}</span>
+              <span class="detail-label">Texte lu</span>
+              <span class="ocr-text">{{ point.event.ocr_text }}</span>
             </div>
           }
 
@@ -124,7 +128,7 @@
               }
             }
             <button type="button" class="btn btn-secondary btn-sm" (click)="openGoogleMaps(point)">
-              <i class="bi bi-map"></i> Google Maps
+              <i class="bi bi-map"></i> Ouvrir la carte
             </button>
             @if (point.event.video_ts_ms != null) {
               <button type="button" class="btn btn-accent btn-sm" (click)="onOpenVideo()">
@@ -138,9 +142,9 @@
       <aside class="map-detail map-detail-hint">
         <div class="empty-state">
           <div class="empty-state-icon"><i class="bi bi-geo-alt"></i></div>
-          <div><strong>Carte interactive ONSR</strong></div>
-          <p>Cliquez sur un marqueur pour voir la photo, la probabilité et le lien vidéo.</p>
-          <p class="muted">La heatmap met en évidence les zones à risque (Tunis, Ariana…). Les événements sans GPS sont placés approximativement selon la ville.</p>
+          <div><strong>Carte des routes</strong></div>
+          <p>Cliquez sur un point pour voir la photo et les détails.</p>
+          <p class="muted">Les zones colorées montrent où les problèmes se concentrent. Si le lieu exact manque, le point est placé près du centre-ville.</p>
         </div>
       </aside>
     }
@@ -148,8 +152,8 @@
 
   <div class="map-legend">
     <span><span class="legend-dot legend-pothole"></span> Nid-de-poule</span>
-    <span><span class="legend-dot legend-signs"></span> Signalétique</span>
-    <span><span class="legend-dot legend-approx"></span> Position ville (approx.)</span>
-    <span><span class="legend-heat"></span> Heatmap densité / gravité</span>
+    <span><span class="legend-dot legend-signs"></span> Panneau</span>
+    <span><span class="legend-dot legend-approx"></span> Près du centre-ville</span>
+    <span><span class="legend-heat"></span> Zones denses</span>
   </div>
 </div>

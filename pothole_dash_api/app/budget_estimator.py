@@ -16,7 +16,7 @@ def _gemini_api_key() -> str:
     return os.environ.get("GEMINI_API_KEY", "").strip()
 
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 
 # Barème indicatif réparation voirie Tunisie (TND) — PFE / ordre de grandeur 2024-2025
 SIZE_RATES_TND: Dict[str, Dict[str, Any]] = {
@@ -159,7 +159,7 @@ def estimate_budget_gemini(image_bytes: bytes, context: Dict[str, Any]) -> Optio
         import google.generativeai as genai
 
         genai.configure(api_key=_gemini_api_key())
-        model = genai.GenerativeModel(GEMINI_MODEL)
+        model = genai.GenerativeModel(os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL))
 
         rules = context.get("rules_estimate") or {}
         prompt = f"""Tu es un ingénieur routier expert en maintenance voirie en TUNISIE (ONSR).

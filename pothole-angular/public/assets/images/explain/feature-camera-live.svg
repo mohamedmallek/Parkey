@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="160.00,129.50 169.00,134.00 160.00,138.50 151.00,134.00" fill="#1a2332" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="151.00,164.00 151.00,134.00 160.00,138.50 160.00,168.50" fill="#26344a" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="169.00,164.00 169.00,134.00 160.00,138.50 160.00,168.50" fill="#0d1420" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/><circle cx="160.0" cy="130.0" r="24" fill="none" stroke="#c0392b" stroke-width="1.6" opacity="0.45"/><circle cx="160.0" cy="132.0" r="14" fill="#1aa9d1" stroke="#1a2332" stroke-width="1.6"/><circle cx="160.0" cy="132.0" r="7" fill="#8fe0f5"/>
+    <path d="M232,90 L233.68,94.32 L238,96 L233.68,97.68 L232,102 L230.32,97.68 L226,96 L230.32,94.32 Z" fill="#fde900"/>
+    
+    <ellipse cx="160" cy="114" rx="22.5" ry="6.6" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="78" r="37" fill="none" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="78" r="30" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,78)">
+    <circle cx="0" cy="6" r="3.2" fill="#2dbee6"/>
+    <path d="M-8,-2 A11,11 0 0 1 8,-2" fill="none" stroke="#1a2332" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M-14,-8 A19,19 0 0 1 14,-8" fill="none" stroke="#1a2332" stroke-width="2.4" stroke-linecap="round" opacity="0.55"/>
+    </g>
+    
+    
+    
+</svg>

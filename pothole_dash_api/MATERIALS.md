@@ -17,7 +17,7 @@
 
 ```
 GEMINI_API_KEY=votre-cle
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 3. Dépendance :

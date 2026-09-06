@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="155.00,154.50 175.00,164.50 165.00,169.50 145.00,159.50" fill="#dff4fb" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="145.00,165.50 145.00,159.50 165.00,169.50 165.00,175.50" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="175.00,170.50 175.00,164.50 165.00,169.50 165.00,175.50" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/><circle cx="150.0" cy="150.0" r="3.2" fill="#1a2332" opacity="0.7"/><circle cx="157.0" cy="154.5" r="3.2" fill="#1a2332" opacity="0.7"/><circle cx="166.0" cy="158.0" r="3.2" fill="#1a2332" opacity="0.7"/><circle cx="173.0" cy="162.5" r="3.2" fill="#1a2332" opacity="0.7"/><circle cx="182.0" cy="166.0" r="3.2" fill="#1a2332" opacity="0.7"/>
+    <path d="M236,90 L237.68,94.32 L242,96 L237.68,97.68 L236,102 L234.32,97.68 L230,96 L234.32,94.32 Z" fill="#fde900"/>
+    
+    <ellipse cx="160" cy="126" rx="22.5" ry="6.6" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="90" r="37" fill="none" stroke="#2dbee6" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="90" r="30" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,90)">
+    <rect x="-19" y="-14" width="38" height="28" rx="5" fill="none" stroke="#1a2332" stroke-width="2.6"/>
+    <path d="M-5,-7 L10,0 L-5,7 Z" fill="#2dbee6"/>
+    <line x1="-19" y1="-6" x2="-13" y2="-6" stroke="#1a2332" stroke-width="2.2"/>
+    <line x1="-19" y1="6" x2="-13" y2="6" stroke="#1a2332" stroke-width="2.2"/>
+    </g>
+    
+    
+    
+</svg>

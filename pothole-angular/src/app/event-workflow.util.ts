@@ -6,7 +6,7 @@ const STATUS_LABELS: Record<EventStatus, string> = {
   CONFIRME: 'Confirmé',
   EN_COURS: 'En cours',
   RESOLU: 'Résolu',
-  FAUX_POSITIF: 'Faux positif',
+  FAUX_POSITIF: 'Écarté',
 };
 
 const SEVERITY_LABELS: Record<EventSeverity, string> = {

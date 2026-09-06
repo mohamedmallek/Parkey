@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <defs></defs>
+  <rect width="320" height="320" fill="none"/>
+  
+    <rect width="320" height="320" fill="#eef8fb" rx="0"/>
+    <ellipse cx="160" cy="245.1" rx="105.0" ry="24.4" fill="#1a2332" opacity="0.10"/>
+<polygon points="131.00,204.50 210.00,215.00 210.00,189.00 131.00,178.50" fill="#d7e0e8"/>
+<polygon points="131.00,204.50 110.00,165.00 110.00,139.00 131.00,178.50" fill="#eaf0f4"/>
+<path d="M 152.00,131.00 L 226.00,168.00 C 233.18,171.59 233.18,177.41 226.00,181.00 L 194.00,197.00 C 186.82,200.59 175.18,200.59 168.00,197.00 L 94.00,160.00 C 86.82,156.41 86.82,150.59 94.00,147.00 L 126.00,131.00 C 133.18,127.41 144.82,127.41 152.00,131.00 Z" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.5"/>
+    <polygon points="160.00,152.00 180.00,162.00 160.00,172.00 140.00,162.00" fill="#cdeaf5" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="140.00,168.00 140.00,162.00 160.00,172.00 160.00,178.00" fill="#d7e0e8" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="180.00,168.00 180.00,162.00 160.00,172.00 160.00,178.00" fill="#eaf0f4" stroke="#c9d3dc" stroke-width="1" stroke-linejoin="round"/><line x1="160.0" y1="151.7" x2="140.0" y2="161.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="165.0" y1="154.2" x2="145.0" y2="164.2" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="170.0" y1="156.7" x2="150.0" y2="166.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="175.0" y1="159.2" x2="155.0" y2="169.2" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="180.0" y1="161.7" x2="160.0" y2="171.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="160.0" y1="151.7" x2="180.0" y2="161.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="155.0" y1="154.2" x2="175.0" y2="164.2" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="150.0" y1="156.7" x2="170.0" y2="166.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="145.0" y1="159.2" x2="165.0" y2="169.2" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><line x1="140.0" y1="161.7" x2="160.0" y2="171.7" stroke="#1a2332" stroke-width="1.3" opacity="0.22"/><g transform="translate(158.5,156.2) scale(0.5)">
+    <path d="M0,-15 C8,-15 14,-9 14,-1 C14,9 0,17 0,17 C0,17 -14,9 -14,-1 C-14,-9 -8,-15 0,-15 Z"
+          fill="#c0392b" stroke="#1a2332" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="0" cy="-1" r="4.6" fill="#fff"/>
+    </g>
+    <path d="M234,90 L235.68,94.32 L240,96 L235.68,97.68 L234,102 L232.32,97.68 L228,96 L232.32,94.32 Z" fill="#fde900"/>
+    
+    <ellipse cx="160" cy="120" rx="24.0" ry="7.04" fill="#1a2332" opacity="0.10"/>
+    <circle cx="160" cy="82" r="39" fill="none" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="2.5 6" opacity="0.55"/>
+    <circle cx="160" cy="82" r="32" fill="#ffffff" stroke="#c9d3dc" stroke-width="1.4"/>
+    <g transform="translate(160,82)">
+    <path d="M0,-15 C8,-15 14,-9 14,-1 C14,9 0,17 0,17 C0,17 -14,9 -14,-1 C-14,-9 -8,-15 0,-15 Z"
+          fill="#c0392b" stroke="#1a2332" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="0" cy="-1" r="4.6" fill="#fff"/>
+    </g>
+    
+    
+    
+</svg>

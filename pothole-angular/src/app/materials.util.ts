@@ -34,11 +34,11 @@ export function formatMaterialLine(m: RepairMaterial): string {
 export function repairConfidenceLabel(confidence?: string | null): string {
   switch ((confidence ?? '').toLowerCase()) {
     case 'haute':
-      return 'Confiance élevée';
+      return 'Estimation fiable';
     case 'moyenne':
-      return 'Confiance moyenne';
+      return 'Estimation moyenne';
     case 'faible':
-      return 'Confiance faible';
+      return 'Estimation approximative';
     default:
       return confidence ?? '—';
   }
@@ -47,13 +47,12 @@ export function repairConfidenceLabel(confidence?: string | null): string {
 export function repairMethodLabel(method?: string | null): string {
   switch (method) {
     case 'gemini':
-      return 'Analyse Gemini (photo)';
+      return 'Estimation à partir de la photo';
     case 'rules_fallback':
-      return 'Barème ONSR (Gemini indisponible)';
     case 'rules_tunisia':
-      return 'Barème ONSR (dimensions IA)';
+      return 'Estimation selon les dimensions';
     default:
-      return method ?? '—';
+      return method ? 'Estimation automatique' : '—';
   }
 }
 

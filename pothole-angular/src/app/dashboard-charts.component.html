@@ -1,0 +1,126 @@
+<section class="analytics">
+  <div class="analytics-banner">
+    <div class="analytics-banner-title">
+      <div class="analytics-icon"><i class="bi bi-bar-chart-line"></i></div>
+      <div>
+        <h3>Aperçu de l’activité</h3>
+        <p>Signalements et réparations, classés par type de problème.</p>
+      </div>
+    </div>
+    <div class="analytics-toolbar">
+      <div class="range-pills" role="group" aria-label="Période">
+        @for (r of ranges; track r) {
+          <button type="button" [class.active]="range() === r" (click)="setRange(r)">{{ rangeButton(r) }}</button>
+        }
+      </div>
+      <button type="button" class="export-btn" (click)="exportCsv.emit()">
+        <i class="bi bi-download"></i> Télécharger le tableau
+      </button>
+    </div>
+  </div>
+
+  <div class="analytics-grid">
+    <article class="analytics-card chart-wide" style="animation-delay: 80ms">
+      <div class="card-head">
+        <div>
+          <h4>Signalements et réparations ({{ rangeLabel() }})</h4>
+          <p>Ce qui a été trouvé, et ce qui a déjà été réparé</p>
+        </div>
+        <div class="legend">
+          <span class="legend-item gold"><i></i> Signalements</span>
+          <span class="legend-item green"><i></i> Réparés</span>
+        </div>
+      </div>
+
+      @if (!series().length) {
+        <p class="empty">Aucune donnée sur cette période.</p>
+      } @else {
+        <div class="chart-wrap">
+          <svg
+            class="area-chart"
+            [attr.viewBox]="'0 0 ' + chartW + ' ' + chartH"
+            preserveAspectRatio="xMidYMid meet"
+            (mousemove)="onChartMove($event)"
+            (mouseleave)="hoverIndex.set(null)"
+          >
+            <defs>
+              <linearGradient id="goldGradientDash" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stop-color="#0f4c81" stop-opacity="0.28" />
+                <stop offset="95%" stop-color="#0f4c81" stop-opacity="0" />
+              </linearGradient>
+              <linearGradient id="greenGradientDash" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stop-color="#34d399" stop-opacity="0.4" />
+                <stop offset="95%" stop-color="#34d399" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            @for (p of series(); track p.label; let i = $index) {
+              <text class="tick-x" [attr.x]="pointX(i)" [attr.y]="chartH - 8" text-anchor="middle">{{ p.label }}</text>
+            }
+            <path class="chart-area chart-area-gold" [attr.d]="detectionsPath()" fill="url(#goldGradientDash)" />
+            <path class="chart-area chart-area-green" [attr.d]="resolvedPath()" fill="url(#greenGradientDash)" />
+            <path class="chart-line chart-line-gold" [attr.d]="detectionsLine()" fill="none" stroke="#0f4c81" stroke-width="2.5" />
+            <path class="chart-line chart-line-green" [attr.d]="resolvedLine()" fill="none" stroke="#34d399" stroke-width="2.5" />
+            @if (hoverIndex() != null) {
+              <line
+                class="hover-line"
+                [attr.x1]="pointX(hoverIndex()!)"
+                [attr.x2]="pointX(hoverIndex()!)"
+                [attr.y1]="16"
+                [attr.y2]="chartH - 32"
+              />
+              <circle [attr.cx]="pointX(hoverIndex()!)" [attr.cy]="pointY(series()[hoverIndex()!].detections)" r="4.5" fill="#0f4c81" />
+              <circle [attr.cx]="pointX(hoverIndex()!)" [attr.cy]="pointY(series()[hoverIndex()!].resolved)" r="4.5" fill="#34d399" />
+            }
+          </svg>
+          @if (hoverPoint(); as hp) {
+            <div class="chart-tooltip">
+              <strong>{{ hp.label }}</strong>
+              <span>Signalements : {{ hp.detections }}</span>
+              <span>Réparés : {{ hp.resolved }}</span>
+            </div>
+          }
+        </div>
+      }
+    </article>
+
+    <article class="analytics-card" style="animation-delay: 150ms">
+      <h4>Types de problèmes</h4>
+      <p class="card-sub">Nids-de-poule et panneaux abîmés</p>
+
+      @if (!categories().length) {
+        <p class="empty">Rien à afficher pour le moment.</p>
+      } @else {
+        <div class="donut-wrap">
+          <svg viewBox="0 0 160 160" class="donut">
+            @for (c of categories(); track c.name; let i = $index) {
+              <g class="donut-slice" [style.animation-delay.ms]="i * 120">
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="52"
+                  fill="none"
+                  [attr.stroke]="c.color"
+                  stroke-width="22"
+                  stroke-linecap="butt"
+                  [attr.stroke-dasharray]="donutDash(c.count, 52)"
+                  [attr.stroke-dashoffset]="donutOffset(i, 52)"
+                  transform="rotate(-90 80 80)"
+                />
+              </g>
+            }
+            <text x="80" y="76" text-anchor="middle" class="donut-total" [countUp]="events().length"></text>
+            <text x="80" y="94" text-anchor="middle" class="donut-label">dossiers</text>
+          </svg>
+        </div>
+        <ul class="cat-list">
+          @for (c of categories(); track c.name; let i = $index) {
+            <li class="cat-item" [style.animation-delay.ms]="220 + i * 90">
+              <span class="cat-name"><i [style.background]="c.color"></i> {{ c.name }}</span>
+              <span class="cat-val">{{ c.count }} · {{ c.percentage }}%</span>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  </div>
+</section>

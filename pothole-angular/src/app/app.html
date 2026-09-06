@@ -1,47 +1,88 @@
 @if (!auth.isLoggedIn()) {
   <div class="login-panel-steex">
     <div class="login-card-steex">
-      <div class="text-center mb-4"><img src="assets/images/logo-3.png" alt="ONSR" height="48" /></div>
-      <h2 class="h4 mb-3">Connexion ONSR</h2>
-      <label class="form-label" for="login-email">Email</label>
-      <input id="login-email" type="email" class="form-control mb-3" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)" />
-      <label class="form-label" for="login-password">Mot de passe</label>
-      <input id="login-password" type="password" class="form-control mb-3" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)" (keyup.enter)="doLogin()" />
-      @if (loginError()) { <div class="alert alert-danger py-2">{{ loginError() }}</div> }
-      <button type="button" class="btn btn-primary w-100" (click)="doLogin()" [disabled]="loginLoading()">
-        @if (loginLoading()) { Connexion… } @else { Se connecter }
-      </button>
+      <div class="text-center mb-3"><img src="assets/images/logo-parkey.jpg" alt="Parkey" class="login-logo" /></div>
+      @if (authScreen() === 'welcome') {
+        <h2 class="h4 mb-2">Votre compte est prêt</h2>
+        <p class="login-lead">Voulez-vous changer le mot de passe reçu par e-mail ?</p>
+        <div class="login-choice">
+          <button type="button" class="btn btn-primary" (click)="acceptChangePassword()">Oui</button>
+          <button type="button" class="btn btn-login-no" (click)="declineChangePassword()">Non</button>
+        </div>
+      } @else if (authScreen() === 'change-password') {
+        <h2 class="h4 mb-2">Nouveau mot de passe</h2>
+        <p class="login-lead">Saisissez le mot de passe reçu par e-mail, puis le nouveau deux fois.</p>
+        <label class="form-label" for="change-email">Adresse e-mail</label>
+        <input id="change-email" type="email" class="form-control mb-3" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)" />
+        <label class="form-label" for="change-current">Mot de passe reçu</label>
+        <input id="change-current" type="password" class="form-control mb-3" autocomplete="current-password" [value]="changeCurrent()" (input)="changeCurrent.set($any($event.target).value)" />
+        <label class="form-label" for="change-new">Nouveau mot de passe</label>
+        <input id="change-new" type="password" class="form-control mb-3" autocomplete="new-password" [value]="changePassword()" (input)="changePassword.set($any($event.target).value)" />
+        <label class="form-label" for="change-confirm">Confirmer le mot de passe</label>
+        <input id="change-confirm" type="password" class="form-control mb-3" autocomplete="new-password" [value]="changeConfirm()" (input)="changeConfirm.set($any($event.target).value)" (keyup.enter)="doChangePassword()" />
+        @if (changeError()) { <div class="alert alert-danger py-2">{{ changeError() }}</div> }
+        <button type="button" class="btn btn-primary w-100" (click)="doChangePassword()" [disabled]="changeLoading()">
+          @if (changeLoading()) { Enregistrement… } @else { Enregistrer }
+        </button>
+        <button type="button" class="login-forgot" (click)="declineChangePassword()">Garder le mot de passe reçu</button>
+      } @else if (authScreen() === 'forgot') {
+        <h2 class="h4 mb-2">Mot de passe oublié</h2>
+        <p class="login-lead">Indiquez votre e-mail : vous recevrez un bouton pour en choisir un nouveau.</p>
+        <label class="form-label" for="forgot-email">Adresse e-mail</label>
+        <input id="forgot-email" type="email" class="form-control mb-3" [value]="forgotEmail()" (input)="forgotEmail.set($any($event.target).value)" (keyup.enter)="doForgotPassword()" />
+        @if (forgotError()) { <div class="alert alert-danger py-2">{{ forgotError() }}</div> }
+        @if (forgotMessage()) { <div class="alert alert-success py-2">{{ forgotMessage() }}</div> }
+        <button type="button" class="btn btn-primary w-100" (click)="doForgotPassword()" [disabled]="forgotLoading()">
+          @if (forgotLoading()) { Envoi… } @else { Envoyer le mail }
+        </button>
+        <button type="button" class="login-forgot" (click)="backToLogin()">Retour à la connexion</button>
+      } @else {
+        <h2 class="h4 mb-2">Bienvenue</h2>
+        <p class="login-lead">Connectez-vous pour suivre l’état des routes.</p>
+        <label class="form-label" for="login-email">Adresse e-mail</label>
+        <input id="login-email" type="email" class="form-control mb-3" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)" />
+        <label class="form-label" for="login-password">Mot de passe</label>
+        <input id="login-password" type="password" class="form-control mb-3" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)" (keyup.enter)="doLogin()" />
+        @if (loginSuccess()) { <div class="alert alert-success py-2">{{ loginSuccess() }}</div> }
+        @if (loginError()) { <div class="alert alert-danger py-2">{{ loginError() }}</div> }
+        <button type="button" class="btn btn-primary w-100" (click)="doLogin()" [disabled]="loginLoading()">
+          @if (loginLoading()) { Connexion… } @else { Entrer }
+        </button>
+        <button type="button" class="login-forgot" (click)="openForgot()">Mot de passe oublié ?</button>
+      }
     </div>
   </div>
 } @else {
 <div id="layout-wrapper">
   <div class="app-menu navbar-menu" [class.show]="sidebarOpen()">
     <div class="navbar-brand-box">
-      <span class="logo logo-light"><span class="logo-lg"><img src="assets/images/logo-3.png" alt="ONSR" /></span></span>
+      <img class="brand-logo" src="assets/images/logo-parkey.jpg" alt="Parkey" />
     </div>
     <ul class="navbar-nav">
-      <li class="menu-title"><span>Menu</span></li>
-      <li><button type="button" class="nav-link" [class.active]="activeSection()==='dashboard'" (click)="setSection('dashboard')"><i class="bi bi-grid"></i> Tableau de bord</button></li>
+      <li class="menu-title"><span>Navigation</span></li>
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='dashboard'" (click)="setSection('dashboard')"><i class="bi bi-house"></i> Accueil</button></li>
       @if (canAnalyze()) {
-        <li><button type="button" class="nav-link" [class.active]="activeSection()==='detection'" (click)="setSection('detection')"><i class="bi bi-camera"></i> Détection image</button></li>
-        <li><button type="button" class="nav-link" [class.active]="activeSection()==='live'" (click)="setSection('live')"><i class="bi bi-camera-video"></i> Caméra live</button></li>
-        <li><button type="button" class="nav-link" [class.active]="activeSection()==='video'" (click)="setSection('video')"><i class="bi bi-play-btn"></i> Analyse vidéo</button></li>
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='detection'" (click)="setSection('detection')"><i class="bi bi-camera"></i> Analyser une photo</button></li>
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='live'" (click)="setSection('live')"><i class="bi bi-camera-video"></i> Caméra en direct</button></li>
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='video'" (click)="setSection('video')"><i class="bi bi-play-btn"></i> Analyser une vidéo</button></li>
       }
-      <li><button type="button" class="nav-link" [class.active]="activeSection()==='events'" (click)="setSection('events')"><i class="bi bi-clipboard-check"></i> Signalements</button></li>
-      <li><button type="button" class="nav-link" [class.active]="activeSection()==='gallery'" (click)="setSection('gallery')"><i class="bi bi-images"></i> Galerie</button></li>
-      <li><button type="button" class="nav-link" [class.active]="activeSection()==='map'" (click)="setSection('map')"><i class="bi bi-map"></i> Carte des anomalies</button></li>
-      @if (auth.user()?.role === 'ADMIN') {
-        <li><button type="button" class="nav-link" [class.active]="activeSection()==='users'" (click)="setSection('users')"><i class="bi bi-people"></i> Utilisateurs</button></li>
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='events'" (click)="setSection('events')"><i class="bi bi-clipboard-check"></i> Dossiers</button></li>
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='gallery'" (click)="setSection('gallery')"><i class="bi bi-images"></i> Photos</button></li>
+      <li><button type="button" class="nav-link" [class.active]="activeSection()==='map'" (click)="setSection('map')"><i class="bi bi-map"></i> Carte</button></li>
+      @if (canManageTeam()) {
+        <li><button type="button" class="nav-link" [class.active]="activeSection()==='users'" (click)="setSection('users')"><i class="bi bi-people"></i> Équipe</button></li>
       }
     </ul>
   </div>
   <header id="page-topbar">
     <div class="navbar-header">
       <button type="button" class="btn btn-sm btn-light d-lg-none" (click)="toggleSidebar()"><i class="bi bi-list"></i></button>
+      <h1 class="page-heading">{{ sectionTitle() }}</h1>
       <div class="user-topbar ms-auto">
-        <span class="user-name">{{ auth.user()?.fullName }}</span>
-        <span class="badge bg-primary-subtle text-primary">{{ auth.user()?.role }}</span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="doLogout()">Déconnexion</button>
+        @if (headerLabel()) {
+          <span class="user-name">{{ headerLabel() }}</span>
+        }
+        <button type="button" class="btn-logout" (click)="doLogout()">Se déconnecter</button>
       </div>
     </div>
   </header>
@@ -50,70 +91,53 @@
       <div class="container-fluid">
 
         @if (activeSection() === 'dashboard') {
-          <div class="page-title-box mb-3">
-            <h4 class="mb-1">Tableau de bord</h4>
-            <p class="text-muted mb-0">ONSR — Surveillance routière</p>
+          <div class="page-title-box mb-3 section-fade">
+            <h4 class="mb-1">Vue d’ensemble</h4>
+            <p class="text-muted mb-0">Un regard simple sur l’état des routes et les dossiers en cours.</p>
           </div>
           <div class="header bg-gradient-onsr pb-4 pt-4">
             <div class="row g-3">
-              <div class="col-xl-3 col-sm-6">
-                <div class="card"><div class="card-body">
-                  <p class="fs-md text-muted mb-0">Événements</p>
-                  <h3 class="counter-value mt-3">{{ events().length }}</h3>
-                  <p class="text-success mb-0"><i class="bi bi-database"></i> Historique</p>
+              <div class="col-xl-3 col-sm-6 kpi-col" style="animation-delay: 0ms">
+                <div class="card kpi-card"><div class="card-body">
+                  <p class="fs-md text-muted mb-0"><i class="bi bi-clipboard-check kpi-card-icon"></i> Dossiers</p>
+                  <h3 class="counter-value mt-3" [countUp]="events().length"></h3>
+                  <p class="text-success mb-0">Enregistrés</p>
                 </div></div>
               </div>
-              <div class="col-xl-3 col-sm-6">
-                <div class="card"><div class="card-body">
-                  <p class="fs-md text-muted mb-0">Alertes</p>
-                  <h3 class="counter-value mt-3">{{ alertCount() }}</h3>
-                  <p class="text-danger mb-0"><i class="bi bi-exclamation-triangle"></i> Critiques</p>
+              <div class="col-xl-3 col-sm-6 kpi-col" style="animation-delay: 70ms">
+                <div class="card kpi-card"><div class="card-body">
+                  <p class="fs-md text-muted mb-0"><i class="bi bi-exclamation-triangle kpi-card-icon"></i> À traiter</p>
+                  <h3 class="counter-value mt-3" [countUp]="alertCount()"></h3>
+                  <p class="text-danger mb-0">Prioritaires</p>
                 </div></div>
               </div>
-              <div class="col-xl-3 col-sm-6">
-                <div class="card"><div class="card-body">
-                  <p class="fs-md text-muted mb-0">Modèles IA</p>
-                  <h3 class="counter-value mt-3">{{ modelsReadyCount() }}/{{ models().length }}</h3>
+              <div class="col-xl-3 col-sm-6 kpi-col" style="animation-delay: 140ms">
+                <div class="card kpi-card"><div class="card-body">
+                  <p class="fs-md text-muted mb-0"><i class="bi bi-check2-circle kpi-card-icon"></i> Contrôles</p>
+                  <h3 class="counter-value mt-3"><span [countUp]="modelsReadyCount()"></span>/{{ models().length }}</h3>
                   <p class="text-primary mb-0">{{ activeModelTitle() }}</p>
                 </div></div>
               </div>
-              <div class="col-xl-3 col-sm-6">
-                <div class="card"><div class="card-body">
-                  <p class="fs-md text-muted mb-0">GPS</p>
-                  <h3 class="counter-value mt-3">{{ lat() != null ? 'ON' : 'OFF' }}</h3>
-                  <p class="text-info mb-0"><i class="bi bi-geo-alt"></i> Position</p>
+              <div class="col-xl-3 col-sm-6 kpi-col" style="animation-delay: 210ms">
+                <div class="card kpi-card"><div class="card-body">
+                  <p class="fs-md text-muted mb-0"><i class="bi bi-geo-alt kpi-card-icon"></i> Position</p>
+                  <h3 class="counter-value mt-3 gps-value" [class.gps-live]="lat() != null">
+                    <span class="gps-dot" [class.gps-dot-on]="lat() != null"></span>{{ lat() != null ? 'Active' : 'Inactive' }}
+                  </h3>
+                  <p class="text-info mb-0">Localisation</p>
                 </div></div>
               </div>
             </div>
           </div>
-          <div class="card mt-4">
-            <div class="card-body">
-              <h6 class="text-muted mb-2">Workflow signalements</h6>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="status-pill status-nouveau">{{ countByStatus('NOUVEAU') }} nouveaux</span>
-                <span class="status-pill status-confirme">{{ countByStatus('CONFIRME') }} confirmés</span>
-                <span class="status-pill status-en-cours">{{ countByStatus('EN_COURS') }} en cours</span>
-                <span class="status-pill status-resolu">{{ countByStatus('RESOLU') }} résolus</span>
-                <span class="status-pill status-faux-positif">{{ countByStatus('FAUX_POSITIF') }} faux positifs</span>
-              </div>
-              <div class="d-flex flex-wrap gap-2">
-              @if (canAnalyze()) {
-                <button class="btn btn-primary" (click)="setSection('detection')"><i class="bi bi-camera me-1"></i> Détection</button>
-                <button class="btn btn-warning text-dark" (click)="setSection('live')"><i class="bi bi-camera-video me-1"></i> Caméra live</button>
-                <button class="btn btn-success" (click)="setSection('video')"><i class="bi bi-play-btn me-1"></i> Vidéo</button>
-              }
-              <button class="btn btn-secondary" (click)="setSection('events')"><i class="bi bi-table me-1"></i> Signalements</button>
-              <button class="btn btn-outline-success" (click)="setSection('gallery')"><i class="bi bi-images me-1"></i> Galerie</button>
-              <button class="btn btn-outline-primary" (click)="setSection('map')"><i class="bi bi-map me-1"></i> Carte</button>
-              </div>
-            </div>
+          <div class="accueil-vision section-fade" style="animation-delay: 240ms">
+            <img src="assets/images/accueil-vision.png" alt="Contrôle d’un nid-de-poule sur une route urbaine" />
           </div>
         }
 
         @if (activeSection() === 'gallery') {
-          <div class="page-title-box mb-3">
-            <h4 class="mb-1">Galerie</h4>
-            <p class="text-muted mb-0">Photos des nids-de-poule et de la signalétique cassée, classées jour par jour.</p>
+          <div class="page-title-box mb-3 section-fade">
+            <h4 class="mb-1">Photos</h4>
+            <p class="text-muted mb-0">Les photos des nids-de-poule et des panneaux abîmés, classées jour par jour.</p>
           </div>
           <div class="card">
             <div class="card-body">
@@ -126,7 +150,7 @@
                     Nids-de-poule ({{ potholePhotoCount() }})
                   </button>
                   <button type="button" class="btn btn-sm" [class.btn-primary]="galleryPhotoKind()==='signs_damage'" [class.btn-outline-secondary]="galleryPhotoKind()!=='signs_damage'" (click)="setGalleryPhotoKind('signs_damage')">
-                    Signalétique ({{ signsPhotoCount() }})
+                    Panneaux ({{ signsPhotoCount() }})
                   </button>
                 </div>
                 @if (canManageSignalements() && galleryFilteredIds().length) {
@@ -151,7 +175,7 @@
               @if (eventsLoading() && !events().length) {
                 <p class="text-muted mb-0">Chargement des photos…</p>
               } @else if (!galleryDayGroups().length) {
-                <p class="text-muted mb-0">Aucune photo de nid-de-poule ou de signalétique cassée pour le moment.</p>
+                <p class="text-muted mb-0">Aucune photo pour le moment.</p>
               } @else {
                 @for (day of galleryDayGroups(); track day.key) {
                   <section class="dash-day">
@@ -181,14 +205,14 @@
                                 <i class="bi bi-trash"></i>
                               </button>
                             }
-                            <app-event-frame [eventId]="e.id" [alt]="e.label" />
+                            <app-event-frame [eventId]="e.id" [alt]="displayLabel(e.label)" />
                             <div class="thumb-body">
-                              <strong>{{ e.label }}</strong>
-                              <span class="topk-prob">{{ e.prob | number:'1.2-2' }}</span>
+                              <strong>{{ displayLabel(e.label) }}</strong>
+                              <span class="topk-prob">{{ confidencePct(e.prob) }}</span>
                               @if (e.size_class) {
                                 <span class="size-pill thumb-size" [class]="sizeClassCss(e.size_class)">{{ sizeClassShort(e.size_class) }} · {{ formatSizeCm(e.width_cm_est, e.length_cm_est) }}</span>
                               }
-                              <div class="mono thumb-coords">{{ e.city || coordLabel(e) }}</div>
+                              <div class="thumb-coords">{{ coordLabel(e) }}</div>
                               <div class="muted" style="font-size:0.7rem">{{ toDate(e.ts_ms) }}</div>
                             </div>
                           </article>
@@ -207,18 +231,18 @@
           </div>
 
           @if (selectedGalleryEvent(); as e) {
-            <div class="dash-lightbox" (click)="closeGalleryPhoto()" role="dialog" aria-modal="true" aria-label="Détail de la détection">
+            <div class="dash-lightbox" (click)="closeGalleryPhoto()" role="dialog" aria-modal="true" aria-label="Détail de la photo">
               <div class="dash-lightbox-card" (click)="$event.stopPropagation()">
                 <div class="dash-lightbox-head">
-                  <h3>{{ isSignsEvent(e) ? 'Signalétique cassée' : 'Nid-de-poule' }}</h3>
+                  <h3>{{ isSignsEvent(e) ? 'Panneau abîmé' : 'Nid-de-poule' }}</h3>
                   <button type="button" class="btn-close-detail" (click)="closeGalleryPhoto()" aria-label="Fermer">&times;</button>
                 </div>
-                <app-event-frame [eventId]="e.id" [alt]="e.label" />
+                <app-event-frame [eventId]="e.id" [alt]="displayLabel(e.label)" />
                 <div class="dash-lightbox-body">
-                  <p class="mb-1"><strong>{{ e.label }}</strong> · {{ e.prob * 100 | number:'1.0-0' }}%</p>
+                  <p class="mb-1"><strong>{{ displayLabel(e.label) }}</strong> · {{ confidencePct(e.prob) }}</p>
                   <p class="text-muted small mb-2">{{ toDate(e.ts_ms) }}@if (e.city) { · {{ e.city }} }</p>
                   <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-primary btn-sm" (click)="openGallerySignalement(e)">Voir le signalement</button>
+                    <button type="button" class="btn btn-primary btn-sm" (click)="openGallerySignalement(e)">Voir le dossier</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" (click)="openMaps(e); $event.stopPropagation()">Carte</button>
                     @if (canManageSignalements()) {
                       <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="galleryDeleting()" (click)="deleteGalleryPhoto(e)">Supprimer</button>
@@ -231,65 +255,82 @@
         }
 
         @if (activeSection() === 'detection') {
-          <section class="panel">
+          <section class="panel photo-analyze section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Analyse</span>
-                <h2 class="panel-title">Nouvelle détection</h2>
-                <p class="panel-desc">Sélectionnez un modèle, renseignez la localisation et lancez l'analyse sur une image terrain.</p>
+                <h2 class="panel-title">Analyser une photo</h2>
+                <p class="panel-desc">Déposez une photo : le lieu est pris automatiquement depuis votre position.</p>
               </div>
             </div>
-            <div class="panel-body">
-              <div class="form-grid">
+            <div class="panel-body photo-analyze-body">
+              <input
+                #photoInput
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/bmp"
+                (change)="onFile($event)"
+                hidden
+              />
+              <button
+                type="button"
+                class="photo-drop"
+                [class.has-file]="!!previewUrl()"
+                (click)="openPhotoPicker()"
+                (dragover)="onPhotoDragOver($event)"
+                (drop)="onPhotoDrop($event)"
+              >
+                @if (previewUrl()) {
+                  <img [src]="previewUrl()!" alt="Photo choisie" />
+                  <span class="photo-drop-change">Changer de photo</span>
+                } @else {
+                  <i class="bi bi-image"></i>
+                  <strong>Ajouter une photo</strong>
+                  <span>Glissez-la ici, ou cliquez pour en choisir une.</span>
+                }
+              </button>
+              @if (file() && !fileIsImage()) {
+                <p class="photo-file-error">Ce fichier n’est pas une photo — ouvrez « Analyser une vidéo ».</p>
+              }
+
+              <div class="photo-side">
                 <div class="field">
-                  <label class="field-label" for="model-select">Modèle IA</label>
+                  <label class="field-label" for="model-select">Que rechercher</label>
                   <select id="model-select" [value]="selectedModel()" (change)="selectedModel.set(($any($event.target).value ?? 'pothole').toString())">
                     @for (m of models(); track m.id) {
-                      <option [value]="m.id" [disabled]="!m.ready">{{ m.title }}{{ m.ready ? '' : ' (non entraîné)' }}</option>
+                      <option [value]="m.id" [disabled]="!m.ready">{{ m.title }}{{ m.ready ? '' : ' (indisponible)' }}</option>
                     }
                   </select>
                 </div>
-                <div class="field">
-                  <label class="field-label">Image (photo uniquement)</label>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/bmp" (change)="onFile($event)" />
-                  @if (file() && !fileIsImage()) {
-                    <span style="font-size:0.75rem;color:var(--danger)">Fichier vidéo détecté — utilisez la section « Analyse vidéo ».</span>
+
+                <div class="place-card" [class.is-ready]="!!city() && !!zone()">
+                  <span class="kpi-kicker">Position actuelle</span>
+                  @if (gpsLoading() || placeLoading()) {
+                    <strong>Recherche de la ville et du quartier…</strong>
+                  } @else {
+                    <div class="place-row"><span>Ville</span><strong>{{ city() || '—' }}</strong></div>
+                    <div class="place-row"><span>Quartier</span><strong>{{ zone() || '—' }}</strong></div>
+                    @if (placeAccuracyLabel()) {
+                      <em>{{ placeAccuracyLabel() }}@if (placeIsApproximate()) { · approximative }</em>
+                    }
                   }
-                </div>
-                <div class="field">
-                  <label class="field-label" for="city">Ville</label>
-                  <input id="city" type="text" placeholder="Ex. Tunis" [value]="city()" (input)="city.set(($any($event.target).value ?? '').toString())" />
-                </div>
-                <div class="field">
-                  <label class="field-label" for="zone">Zone</label>
-                  <input id="zone" type="text" placeholder="Ex. Centre-ville" [value]="zone()" (input)="zone.set(($any($event.target).value ?? '').toString())" />
-                </div>
-                <div class="field">
-                  <label class="field-label" for="threshold">Seuil (0—1)</label>
-                  <input id="threshold" type="number" min="0" max="1" step="0.05" [value]="threshold()" (input)="threshold.set(parseNumber(($any($event.target).value ?? '0.8')))" />
-                </div>
-                <div class="field-actions">
-                  <button type="button" class="btn btn-secondary" (click)="useGps()" [disabled]="gpsLoading()">
-                    {{ gpsLoading() ? 'Localisation…' : 'Activer le GPS' }}
-                  </button>
-                  @if (lat() !== null && lon() !== null) {
-                    <span class="gps-chip">{{ lat() | number:'1.5-5' }}, {{ lon() | number:'1.5-5' }}</span>
-                  }
-                  <button type="button" class="btn btn-primary" (click)="onPredict()" [disabled]="!file() || loading() || !fileIsImage()">
-                    @if (loading()) { Analyse en cours… } @else { Lancer l'analyse }
+                  <button type="button" class="overview-link" (click)="useGps()" [disabled]="gpsLoading() || placeLoading()">
+                    {{ gpsLoading() || placeLoading() ? 'Localisation…' : (lat() != null ? 'Actualiser la position' : 'Autoriser la position') }}
                   </button>
                 </div>
+
+                <button type="button" class="btn btn-primary photo-analyze-btn" (click)="onPredict()" [disabled]="!file() || loading() || !fileIsImage()">
+                  @if (loading()) { Analyse en cours… } @else { Analyser }
+                </button>
               </div>
+
               @if (error()) { <div class="alert-banner">{{ error() }}</div> }
               @if (gpsError()) { <div class="alert-banner">{{ gpsError() }}</div> }
             </div>
           </section>
 
-          <section class="panel">
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Résultats</span>
-                <h2 class="panel-title">Aperçu &amp; diagnostic</h2>
+                <h2 class="panel-title">Résultat</h2>
               </div>
             </div>
             <div class="analysis-grid">
@@ -303,15 +344,15 @@
                     }
                   </div>
                   @if (selectedModel() === 'pothole' && detections().length) {
-                    <p style="margin-top:10px;font-size:0.8125rem;color:var(--text-secondary)">Cadre orange : zone estimée du nid-de-poule (calibration voie 3,5 m)</p>
+                    <p style="margin-top:10px;font-size:0.8125rem;color:var(--text-secondary)">Le cadre indique la zone concernée.</p>
                   }
                   @if (selectedModel() === 'signs_damage' && detections().length) {
-                    <p style="margin-top:10px;font-size:0.8125rem;color:var(--text-secondary)">Cadres rouges : panneaux endommagés détectés</p>
+                    <p style="margin-top:10px;font-size:0.8125rem;color:var(--text-secondary)">Les cadres indiquent les panneaux abîmés.</p>
                   }
                 } @else {
                   <div class="empty-state">
                     <div class="empty-state-icon">•</div>
-                    <div>Importez une image JPG, PNG ou WebP</div>
+                    <div>Ajoutez une photo pour commencer</div>
                   </div>
                 }
                 </div>
@@ -320,25 +361,25 @@
                 @if (result()) {
                   <div class="result-metrics">
                     <div class="metric">
-                      <div class="metric-label">Label</div>
-                      <div class="metric-value">{{ result()!.label }}</div>
+                      <div class="metric-label">Type</div>
+                      <div class="metric-value">{{ findingLabel({ label: result()!.label, model: result()!.model, alert: !!(result()!.event?.alert || (result()!.detection_count ?? 0) > 0) }) }}</div>
                     </div>
                     <div class="metric">
-                      <div class="metric-label">Confiance</div>
-                      <div class="metric-value">{{ result()!.prob * 100 | number:'1.1-1' }}%</div>
+                      <div class="metric-label">Fiabilité</div>
+                      <div class="metric-value">{{ confidencePct(result()!.prob) }}</div>
                     </div>
-                    @if (result()!.kind === 'yolo') {
+                    @if ((result()!.detection_count ?? 0) > 0) {
                       <div class="metric">
-                        <div class="metric-label">Détections</div>
+                        <div class="metric-label">Problèmes trouvés</div>
                         <div class="metric-value">{{ result()!.detection_count ?? 0 }}</div>
                       </div>
                     }
                     <div class="metric">
-                      <div class="metric-label">Statut</div>
+                      <div class="metric-label">Résultat</div>
                       @if (result()!.event?.alert || (result()!.detection_count ?? 0) > 0) {
-                        <span class="badge badge-alert">{{ selectedModel() === 'signs_damage' ? 'Signalétique' : 'Nid-de-poule' }}</span>
+                        <span class="badge badge-alert">{{ selectedModel() === 'signs_damage' ? 'Panneau abîmé' : 'Nid-de-poule' }}</span>
                       } @else {
-                        <span class="badge badge-ok">Conforme</span>
+                        <span class="badge badge-ok">Rien à signaler</span>
                       }
                     </div>
                     @if (result()!.size_estimate || result()!.event?.size_class) {
@@ -357,7 +398,7 @@
                         </div>
                       </div>
                       <div class="metric">
-                        <div class="metric-label">Profondeur (proxy)</div>
+                        <div class="metric-label">Profondeur</div>
                         <div class="metric-value" style="font-size:0.8125rem">
                           {{ depthProxyLabel(result()!.size_estimate?.depth_proxy ?? result()!.event?.depth_proxy) }}
                         </div>
@@ -376,7 +417,7 @@
                       </h3>
                       @if (result()!.repair_analysis?.method || result()!.event?.repair_method) {
                         <p class="muted" style="font-size:0.8125rem;margin:4px 0">
-                          Source : {{ repairMethodLabel(result()!.repair_analysis?.method ?? result()!.event?.repair_method) }}
+                          {{ repairMethodLabel(result()!.repair_analysis?.method ?? result()!.event?.repair_method) }}
                         </p>
                       }
                       @if (result()!.repair_analysis?.gemini_error || result()!.event?.repair_materials_warning) {
@@ -412,42 +453,38 @@
                       </p>
                     </div>
                   }
-                  @if (result()!.kind === 'yolo' && detections().length) {
-                    <h3 class="panel-title" style="font-size:0.875rem;margin:0 0 8px">Localisation rue</h3>
+                  @if (detections().length) {
+                    <h3 class="panel-title" style="font-size:0.875rem;margin:0 0 8px">Emplacements</h3>
                     <ul class="det-list">
                       @for (d of detections(); track $index) {
                         <li class="det-item">
                           <div class="det-item-head">
-                            <strong>{{ d.label }}</strong>
-                            <span class="topk-prob">{{ d.conf * 100 | number:'1.1-1' }}%</span>
+                            <strong>{{ displayLabel(d.label) }}</strong>
+                            <span class="topk-prob">{{ confidencePct(d.conf) }}</span>
                           </div>
-                          <div class="mono" style="font-size:0.8125rem;color:var(--text-secondary)">
-                            {{ d.street?.lat != null && d.street?.lon != null ? d.street!.lat + ', ' + d.street!.lon : 'GPS non fourni' }}
+                          <div style="font-size:0.8125rem;color:var(--text-secondary)">
+                            {{ d.street?.lat != null && d.street?.lon != null ? 'Position enregistrée' : 'Position inconnue' }}
                           </div>
-                          <button type="button" class="btn btn-secondary btn-sm" (click)="openMapsFromDetection(d)" [disabled]="d.street?.lat == null || d.street?.lon == null">Ouvrir Google Maps</button>
+                          <button type="button" class="btn btn-secondary btn-sm" (click)="openMapsFromDetection(d)" [disabled]="d.street?.lat == null || d.street?.lon == null">Ouvrir la carte</button>
                         </li>
                       }
                     </ul>
                   }
-                  @if (result()!.kind !== 'yolo' && result()!.topk?.length) {
-                    <h3 class="panel-title" style="font-size:0.875rem;margin:16px 0 8px">Top classes</h3>
+                  @if (!detections().length && result()!.topk?.length) {
+                    <h3 class="panel-title" style="font-size:0.875rem;margin:16px 0 8px">Autres possibilités</h3>
                     <ul class="topk-list">
                       @for (t of result()!.topk; track t.label) {
                         <li class="topk-item">
-                          <span>{{ t.label }}</span>
-                          <span class="topk-prob">{{ t.prob | number:'1.2-2' }}</span>
+                          <span>{{ displayLabel(t.label) }}</span>
+                          <span class="topk-prob">{{ confidencePct(t.prob) }}</span>
                         </li>
                       }
                     </ul>
                   }
-                  <details class="raw-details">
-                    <summary>Données brutes (JSON)</summary>
-                    <pre>{{ result() | json }}</pre>
-                  </details>
                 } @else {
                   <div class="empty-state">
-                    <div class="empty-state-icon">•</div>
-                    <div>Lancez une analyse pour afficher les résultats</div>
+                    <div class="empty-state-icon"><i class="bi bi-search"></i></div>
+                    <div>Analysez une photo pour voir le résultat</div>
                   </div>
                 }
               </div>
@@ -456,23 +493,22 @@
         }
 
         @if (activeSection() === 'live') {
-          <section class="panel">
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Temps réel</span>
-                <h2 class="panel-title">Caméra live — détection IA</h2>
-                <p class="panel-desc">Flux webcam avec analyse automatique des nids-de-poule et de la signalétique endommagée. Les alertes sont enregistrées comme signalements.</p>
+                <h2 class="panel-title">Caméra en direct</h2>
+                <p class="panel-desc">Filmez la route : les nids-de-poule et panneaux abîmés sont repérés automatiquement et enregistrés.</p>
               </div>
               <div class="live-toolbar">
                 <select class="video-model-select" [value]="liveModel()" (change)="liveModel.set($any($event.target).value)">
-                  <option value="both">Les deux modèles</option>
+                  <option value="both">Tous les types</option>
                   <option value="pothole">Nids-de-poule</option>
-                  <option value="signs_damage">Signalétique cassée</option>
+                  <option value="signs_damage">Panneaux abîmés</option>
                 </select>
                 <label class="live-interval-label">
-                  Intervalle
+                  Toutes les
                   <input type="number" class="video-fps-input" min="2" max="15" step="1" [value]="liveIntervalSec()" (input)="onLiveIntervalChange($any($event.target).value)" />
-                  s
+                  secondes
                 </label>
                 @if (!liveActive()) {
                   <button type="button" class="btn btn-accent" (click)="startLiveCamera()">
@@ -490,20 +526,17 @@
             </div>
             <div class="panel-body">
               <div class="live-controls-row">
-                <button type="button" class="btn btn-secondary btn-sm" (click)="useGps()" [disabled]="gpsLoading()">
-                  {{ gpsLoading() ? 'GPS…' : 'Activer le GPS' }}
-                </button>
-                @if (lat() !== null && lon() !== null) {
-                  <span class="gps-chip">{{ lat() | number:'1.5-5' }}, {{ lon() | number:'1.5-5' }}</span>
-                }
-                <div class="field" style="margin:0">
-                  <input type="text" placeholder="Ville" [value]="city()" (input)="city.set(($any($event.target).value ?? '').toString())" style="max-width:120px" />
-                </div>
-                <div class="field" style="margin:0">
-                  <input type="text" placeholder="Zone" [value]="zone()" (input)="zone.set(($any($event.target).value ?? '').toString())" style="max-width:140px" />
-                </div>
-                <div class="field" style="margin:0">
-                  <input type="number" min="0" max="1" step="0.05" title="Seuil" [value]="threshold()" (input)="threshold.set(parseNumber(($any($event.target).value ?? '0.8')))" style="max-width:72px" />
+                <div class="place-card is-inline" [class.is-ready]="!!city() && !!zone()">
+                  <span class="kpi-kicker">Position actuelle</span>
+                  @if (gpsLoading() || placeLoading()) {
+                    <strong>Recherche de la ville et du quartier…</strong>
+                  } @else {
+                    <div class="place-row"><span>Ville</span><strong>{{ city() || '—' }}</strong></div>
+                    <div class="place-row"><span>Quartier</span><strong>{{ zone() || '—' }}</strong></div>
+                  }
+                  <button type="button" class="overview-link" (click)="useGps()" [disabled]="gpsLoading() || placeLoading()">
+                    {{ gpsLoading() || placeLoading() ? 'Localisation…' : (lat() != null ? 'Actualiser' : 'Autoriser') }}
+                  </button>
                 </div>
               </div>
 
@@ -527,7 +560,7 @@
                     @if (!liveActive()) {
                       <div class="live-placeholder">
                         <i class="bi bi-camera-video"></i>
-                        <p>Cliquez « Démarrer la caméra » pour lancer la détection en direct</p>
+                        <p>Cliquez sur « Démarrer la caméra » pour commencer</p>
                       </div>
                     }
                   </div>
@@ -535,9 +568,9 @@
                     <div class="live-status-bar">
                       <span class="live-status-dot"></span>
                       <span>En direct</span>
-                      <span class="muted">· {{ liveFramesAnalyzed() }} image(s) analysée(s)</span>
+                      <span class="muted">· {{ liveFramesAnalyzed() }} photo{{ liveFramesAnalyzed() > 1 ? 's' : '' }} examinée{{ liveFramesAnalyzed() > 1 ? 's' : '' }}</span>
                       @if (liveDetections().length) {
-                        <span class="chip chip-signs">{{ liveDetections().length }} détection(s) sur l’image</span>
+                        <span class="chip chip-signs">{{ liveDetections().length }} problème{{ liveDetections().length > 1 ? 's' : '' }} sur l’image</span>
                       }
                     </div>
                   }
@@ -547,35 +580,35 @@
                   @if (liveLastResult()) {
                     <div class="result-metrics">
                       <div class="metric">
-                        <div class="metric-label">Dernière alerte</div>
-                        <div class="metric-value" style="font-size:0.9375rem">{{ liveLastResult()!.label }}</div>
+                        <div class="metric-label">Dernier problème</div>
+                        <div class="metric-value" style="font-size:0.9375rem">{{ displayLabel(liveLastResult()!.label) }}</div>
                       </div>
                       <div class="metric">
-                        <div class="metric-label">Confiance</div>
-                        <div class="metric-value">{{ liveLastResult()!.prob * 100 | number:'1.1-1' }}%</div>
+                        <div class="metric-label">Fiabilité</div>
+                        <div class="metric-value">{{ confidencePct(liveLastResult()!.prob) }}</div>
                       </div>
                       <div class="metric">
-                        <div class="metric-label">Modèle</div>
-                        <div class="metric-value" style="font-size:0.875rem">{{ liveLastResult()!.model ?? '—' }}</div>
+                        <div class="metric-label">Type</div>
+                        <div class="metric-value" style="font-size:0.875rem">{{ modelLabel(liveLastResult()!.model) }}</div>
                       </div>
                       <div class="metric">
-                        <div class="metric-label">Statut</div>
+                        <div class="metric-label">Résultat</div>
                         @if (liveLastResult()!.event?.alert || (liveLastResult()!.detection_count ?? 0) > 0) {
-                          <span class="badge badge-alert">Alerte</span>
+                          <span class="badge badge-alert">À traiter</span>
                         } @else {
-                          <span class="badge badge-ok">RAS</span>
+                          <span class="badge badge-ok">Rien à signaler</span>
                         }
                       </div>
                     </div>
                   } @else {
                     <div class="empty-state">
-                      <div class="empty-state-icon"><i class="bi bi-radar"></i></div>
+                      <div class="empty-state-icon"><i class="bi bi-camera-video"></i></div>
                       <div>En attente de la première analyse…</div>
                     </div>
                   }
 
                   @if (liveAlerts().length) {
-                    <h3 class="panel-title" style="font-size:0.9375rem;margin:16px 0 8px">Alertes enregistrées ({{ liveAlerts().length }})</h3>
+                    <h3 class="panel-title" style="font-size:0.9375rem;margin:16px 0 8px">Problèmes trouvés ({{ liveAlerts().length }})</h3>
                     <div class="live-alert-feed">
                       @for (e of liveAlerts(); track e.id) {
                         <article class="live-alert-item">
@@ -583,9 +616,9 @@
                             <span class="thumb-badge" [class.thumb-badge-pothole]="e.model !== 'signs_damage'" [class.thumb-badge-signs]="e.model === 'signs_damage'">
                               {{ e.model === 'signs_damage' ? 'Signalétique' : 'Nid-de-poule' }}
                             </span>
-                            <span class="topk-prob">{{ e.prob * 100 | number:'1.0-0' }}%</span>
+                            <span class="topk-prob">{{ confidencePct(e.prob) }}</span>
                           </div>
-                          <strong>{{ e.label }}</strong>
+                          <strong>{{ displayLabel(e.label) }}</strong>
                           <div class="muted" style="font-size:0.75rem">{{ toDate(e.ts_ms) }}</div>
                           @if (e.lat != null && e.lon != null) {
                             <button type="button" class="btn btn-secondary btn-sm" (click)="openMaps(e)">Carte</button>
@@ -608,28 +641,30 @@
         }
 
         @if (activeSection() === 'video') {
-          <section class="panel">
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Vidéo</span>
-                <h2 class="panel-title">Analyse séquentielle</h2>
-                <p class="panel-desc">Lecture de la vidéo + détection IA. L'OCR lit le texte en bas de l'image (souvent GPS affiché sur la dashcam) pour compléter lat/lon.</p>
+                <h2 class="panel-title">Analyser une vidéo</h2>
+                <p class="panel-desc">Ajoutez une vidéo de trajet : les nids-de-poule et panneaux abîmés sont repérés au fil de la lecture.</p>
               </div>
               <div class="video-toolbar">
                 <input type="file" accept="video/*" (change)="onVideo($event)" />
                 <select class="video-model-select" [value]="videoModel()" (change)="videoModel.set(($any($event.target).value ?? 'both').toString())">
-                  <option value="both">Les deux modèles</option>
+                  <option value="both">Tous les types</option>
                   <option value="pothole">Nids-de-poule</option>
-                  <option value="signs_damage">Signalétique cassée</option>
+                  <option value="signs_damage">Panneaux abîmés</option>
                 </select>
-                <input type="number" class="video-fps-input" min="0.25" max="5" step="0.25" placeholder="FPS" title="Images analysées par seconde" [value]="sampleFps()" (input)="sampleFps.set(parseNumber(($any($event.target).value ?? '1')))" />
-                <input type="number" class="video-fps-input" min="0" max="50000" step="50" placeholder="0" title="0 = toute la vidéo selon FPS" [value]="maxVideoFrames()" (input)="maxVideoFrames.set(parseIntSafe(($any($event.target).value ?? '0'), 0))" />
-                <label class="ocr-toggle" title="EasyOCR sur le bandeau bas de chaque frame">
+                <select class="video-model-select" [value]="sampleFps()" (change)="setVideoPace($any($event.target).value)" title="Précision">
+                  <option [value]="0.5">Rapide</option>
+                  <option [value]="1">Normal</option>
+                  <option [value]="2">Détaillé</option>
+                </select>
+                <label class="ocr-toggle" title="Lire la position affichée dans la vidéo">
                   <input type="checkbox" [checked]="ocrEnabled()" (change)="ocrEnabled.set($any($event.target).checked)" />
-                  OCR GPS (texte vidéo)
+                  Lire la position affichée
                 </label>
                 <button type="button" class="btn btn-accent" (click)="analyzeVideo()" [disabled]="!videoFile() || videoLoading()">
-                  @if (videoLoading()) { Analyse vidéo… } @else { Analyser la vidéo }
+                  @if (videoLoading()) { Analyse en cours… } @else { Analyser la vidéo }
                 </button>
               </div>
             </div>
@@ -640,20 +675,20 @@
                   @if (videoLoading()) {
                     <div class="video-overlay">
                       <span class="video-overlay-spinner"></span>
-                      Analyse en cours — la vidéo reste lisible pendant le traitement
+                      Analyse en cours — vous pouvez continuer à regarder la vidéo
                     </div>
                   }
                 </div>
                 <p class="video-hint">
                   @if (videoDurationSec() > 0) {
-                    Durée {{ formatDuration(videoDurationSec()) }} — ~{{ estimatedVideoSamples() }} images si Max=0 et FPS={{ sampleFps() }}.
+                    Durée {{ formatDuration(videoDurationSec()) }}.
                   }
-                  Cliquez sur une capture pour sauter à ce moment.
+                  Cliquez sur une photo pour aller à ce moment.
                 </p>
               }
               @if (videoLoading()) {
                 <div class="video-progress">
-                  Analyse de toute la vidéo en cours ({{ formatDuration(videoDurationSec()) }}). Ne fermez pas l'onglet — jusqu'à 1 h sur CPU pour les très longues vidéos.
+                  Analyse en cours ({{ formatDuration(videoDurationSec()) }}). Laissez cet écran ouvert, surtout pour une longue vidéo.
                 </div>
               }
               @if (videoNote()) { <div class="video-note">{{ videoNote() }}</div> }
@@ -665,20 +700,20 @@
                 </div>
               }
               @if (videoPotholeEvents().length) {
-                <h3 class="video-section-title">Nids-de-poule détectés</h3>
+                <h3 class="video-section-title">Nids-de-poule trouvés</h3>
                 <div class="thumb-grid">
                   @for (e of videoPotholeEvents(); track e.id) {
                     <article class="thumb-card" (click)="seekVideoToEvent(e)" role="button" tabindex="0">
                       <span class="thumb-badge thumb-badge-pothole">Nid-de-poule</span>
-                      <app-event-frame [eventId]="e.id" [alt]="e.label" />
+                      <app-event-frame [eventId]="e.id" [alt]="displayLabel(e.label)" />
                       <div class="thumb-body">
-                        <strong>{{ e.label }}</strong>
-                        <span class="topk-prob">{{ e.prob | number:'1.2-2' }}</span>
+                        <strong>{{ displayLabel(e.label) }}</strong>
+                        <span class="topk-prob">{{ confidencePct(e.prob) }}</span>
                         @if (e.size_class) {
                           <span class="size-pill thumb-size" [class]="sizeClassCss(e.size_class)">{{ sizeClassShort(e.size_class) }} · {{ formatSizeCm(e.width_cm_est, e.length_cm_est) }}</span>
                         }
-                        <div class="mono thumb-coords">{{ coordLabel(e) }}</div>
-                        @if (e.ocr_text) { <div class="ocr-snippet" title="Texte lu par OCR">OCR: {{ e.ocr_text }}</div> }
+                        <div class="thumb-coords">{{ coordLabel(e) }}</div>
+                        @if (e.ocr_text) { <div class="ocr-snippet" title="Texte lu sur la vidéo">Position lue : {{ e.ocr_text }}</div> }
                         <div class="muted" style="font-size:0.7rem">{{ timeLabel(e) }}</div>
                         <div class="thumb-actions">
                           <button type="button" class="btn btn-secondary btn-sm" (click)="seekVideoToEvent(e); $event.stopPropagation()">▶ Vidéo</button>
@@ -690,20 +725,20 @@
                 </div>
               }
               @if (videoSignsEvents().length) {
-                <h3 class="video-section-title">Signalétique cassée détectée</h3>
+                <h3 class="video-section-title">Panneaux abîmés trouvés</h3>
                 <div class="thumb-grid">
                   @for (e of videoSignsEvents(); track e.id) {
                     <article class="thumb-card" (click)="seekVideoToEvent(e)" role="button" tabindex="0">
                       <span class="thumb-badge thumb-badge-signs">Panneau abîmé</span>
-                      <app-event-frame [eventId]="e.id" [alt]="e.label" />
+                      <app-event-frame [eventId]="e.id" [alt]="displayLabel(e.label)" />
                       <div class="thumb-body">
-                        <strong>{{ e.label }}</strong>
-                        <span class="topk-prob">{{ e.prob | number:'1.2-2' }}</span>
-                        <div class="mono thumb-coords">{{ coordLabel(e) }}</div>
-                        @if (e.ocr_text) { <div class="ocr-snippet" title="Texte lu par OCR">OCR: {{ e.ocr_text }}</div> }
+                        <strong>{{ displayLabel(e.label) }}</strong>
+                        <span class="topk-prob">{{ confidencePct(e.prob) }}</span>
+                        <div class="thumb-coords">{{ coordLabel(e) }}</div>
+                        @if (e.ocr_text) { <div class="ocr-snippet" title="Texte lu sur la vidéo">Position lue : {{ e.ocr_text }}</div> }
                         <div class="muted" style="font-size:0.7rem">
                           {{ timeLabel(e) }}
-                          @if (e.detection_count && e.detection_count > 1) { · {{ e.detection_count }} détections }
+                          @if (e.detection_count && e.detection_count > 1) { · {{ e.detection_count }} trouvés }
                         </div>
                         <div class="thumb-actions">
                           <button type="button" class="btn btn-secondary btn-sm" (click)="seekVideoToEvent(e); $event.stopPropagation()">▶ Vidéo</button>
@@ -717,20 +752,19 @@
               @if (!videoPreviewUrl() && !videoLoading()) {
                 <div class="empty-state">
                   <div class="empty-state-icon">•</div>
-                  <div>Uploadez une vidéo MP4 puis cliquez « Analyser la vidéo »</div>
+                    <div>Ajoutez une vidéo, puis cliquez sur « Analyser la vidéo »</div>
                 </div>
               }
             </div>
           </section>
         }
 
-        @if (activeSection() === 'users' && auth.user()?.role === 'ADMIN') {
-          <section class="panel">
+        @if (activeSection() === 'users' && canManageTeam()) {
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Administration</span>
-                <h2 class="panel-title">Gestion des utilisateurs</h2>
-                <p class="panel-desc">Créez des comptes Opérateur ou Lecteur — les identifiants sont envoyés par email.</p>
+                <h2 class="panel-title">Équipe</h2>
+                <p class="panel-desc">{{ canCreateAdmin() ? 'Créez un administrateur, un opérateur ou un lecteur : les identifiants sont envoyés par e-mail.' : 'Créez un compte opérateur ou lecteur : les identifiants sont envoyés par e-mail.' }}</p>
               </div>
               <button type="button" class="btn btn-secondary btn-sm" (click)="loadUsers()" [disabled]="usersLoading()">
                 {{ usersLoading() ? '…' : 'Actualiser' }}
@@ -743,25 +777,28 @@
                   <input class="field-input" [value]="newUserName()" (input)="newUserName.set($any($event.target).value)" />
                 </div>
                 <div class="field">
-                  <label class="field-label">Email</label>
+                  <label class="field-label">E-mail</label>
                   <input type="email" class="field-input" [value]="newUserEmail()" (input)="newUserEmail.set($any($event.target).value)" />
                 </div>
                 <div class="field">
                   <label class="field-label">Rôle</label>
                   <select class="field-input" [value]="newUserRole()" (change)="newUserRole.set($any($event.target).value)">
-                    <option value="OPERATOR">Opérateur (analyse)</option>
-                    <option value="VIEWER">Lecteur (consultation)</option>
+                    @if (canCreateAdmin()) {
+                      <option value="ADMIN">Administrateur — gère l’équipe</option>
+                    }
+                    <option value="OPERATOR">Opérateur — peut analyser</option>
+                    <option value="VIEWER">Lecteur — peut consulter</option>
                   </select>
                 </div>
                 <div class="field">
                   <label class="field-label">Mot de passe (optionnel)</label>
-                  <input type="password" class="field-input" placeholder="Auto-généré si vide" [value]="newUserPassword()" (input)="newUserPassword.set($any($event.target).value)" />
+                  <input type="password" class="field-input" placeholder="Généré automatiquement si vide" [value]="newUserPassword()" (input)="newUserPassword.set($any($event.target).value)" />
                 </div>
               </div>
               @if (usersError()) { <div class="alert-banner">{{ usersError() }}</div> }
               @if (usersSuccess()) { <div class="video-note">{{ usersSuccess() }}</div> }
               <button type="button" class="btn btn-accent" (click)="createUser()" [disabled]="usersSaving()">
-                @if (usersSaving()) { Création… } @else { Créer et envoyer par email }
+                @if (usersSaving()) { Création… } @else { Créer et envoyer par e-mail }
               </button>
               @if (users().length) {
                 <div class="table-wrap" style="margin-top:20px">
@@ -769,7 +806,7 @@
                     <thead>
                       <tr>
                         <th>Nom</th>
-                        <th>Email</th>
+                        <th>E-mail</th>
                         <th>Rôle</th>
                         <th>Actif</th>
                         <th></th>
@@ -778,12 +815,12 @@
                     <tbody>
                       @for (u of users(); track u.id) {
                         <tr>
-                          <td>{{ u.fullName }}</td>
+                          <td>{{ displayName(u.fullName) }}</td>
                           <td>{{ u.email }}</td>
-                          <td>{{ u.role }}</td>
+                          <td>{{ roleLabel(u.role) }}</td>
                           <td>{{ u.enabled ? 'Oui' : 'Non' }}</td>
                           <td>
-                            @if (u.role !== 'ADMIN') {
+                            @if (canDeleteUser(u)) {
                               <button type="button" class="btn btn-secondary btn-sm" (click)="deleteUser(u.id)">Supprimer</button>
                             }
                           </td>
@@ -798,17 +835,16 @@
         }
 
         @if (activeSection() === 'map') {
-          <section class="panel">
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Planification</span>
-                <h2 class="panel-title">Carte interactive des anomalies</h2>
-                <p class="panel-desc">Visualisation géographique des nids-de-poule et signalétique endommagée — heatmap des zones à risque pour prioriser les interventions de maintenance.</p>
+                <h2 class="panel-title">Carte des routes</h2>
+                <p class="panel-desc">Repérez les nids-de-poule et panneaux abîmés pour prioriser les réparations.</p>
               </div>
             </div>
             <div class="panel-body">
               @if (eventsLoading()) {
-                <div class="video-note">Chargement des événements…</div>
+                <div class="video-note">Chargement de la carte…</div>
               }
               @if (eventsError()) { <div class="alert-banner">{{ eventsError() }}</div> }
               <app-events-map
@@ -826,19 +862,17 @@
         }
 
         @if (activeSection() === 'events') {
-          <section class="panel">
+          <section class="panel section-fade">
             <div class="panel-head">
               <div>
-                <span class="section-tag">Workflow ONSR</span>
-                <h2 class="panel-title">Gestion des signalements</h2>
-                <p class="panel-desc">Cycle de vie : détection IA → validation opérateur → intervention → résolution. Historique des changements tracé.</p>
+                <h2 class="panel-title">Dossiers</h2>
+                <p class="panel-desc">Suivez chaque problème : nouveau, confirmé, en réparation, puis réparé.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button type="button" class="btn btn-secondary btn-sm" (click)="refreshEvents()" [disabled]="eventsLoading()">
                   {{ eventsLoading() ? 'Chargement…' : 'Actualiser' }}
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" (click)="downloadJson()">JSON</button>
-                <button type="button" class="btn btn-secondary btn-sm" (click)="downloadCsv()">CSV</button>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="downloadCsv()">Télécharger le tableau</button>
               </div>
             </div>
             <div class="panel-body" style="padding-top:0">
@@ -856,7 +890,7 @@
                   }
                 </select>
                 <select class="map-select" [value]="eventFilterSeverity()" (change)="eventFilterSeverity.set($any($event.target).value); applyEventFilters()">
-                  <option value="">Toutes gravités</option>
+                  <option value="">Toutes les gravités</option>
                   @for (g of workflowSeverities; track g) {
                     <option [value]="g">{{ severityLabel(g) }}</option>
                   }
@@ -873,14 +907,14 @@
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Label</th>
+                        <th>Type</th>
                         <th>Gravité</th>
                         <th>Taille</th>
                         <th>Matériaux</th>
                         <th>Statut</th>
-                        <th>Prob.</th>
+                        <th>Fiabilité</th>
                         <th>Ville</th>
-                        <th>Zone</th>
+                        <th>Quartier</th>
                         @if (canManageSignalements()) {
                           <th>Actions</th>
                         }
@@ -897,14 +931,22 @@
                           role="button"
                           tabindex="0"
                         >
-                          <td>{{ toDate(e.ts_ms) }}</td>
-                          <td>
-                            <strong>{{ e.label }}</strong>
-                            <div class="muted" style="font-size:0.7rem">{{ e.model ?? '—' }}</div>
+                          <td class="cell-date">
+                            <strong>{{ tableDate(e.ts_ms) }}</strong>
+                            <span>{{ tableTime(e.ts_ms) }}</span>
                           </td>
-                          <td><span class="severity-pill" [class]="severityCssClass(e.severity)">{{ severityLabel(e.severity) }}</span></td>
+                          <td class="cell-type">
+                            <strong [class.type-ok]="isClearFinding(e)">{{ findingLabel(e) }}</strong>
+                          </td>
                           <td>
-                            @if (isPotholeEvent(e) && e.size_class) {
+                            @if (isClearFinding(e)) {
+                              <span class="muted">—</span>
+                            } @else {
+                              <span class="severity-pill" [class]="severityCssClass(e.severity)">{{ severityLabel(e.severity) }}</span>
+                            }
+                          </td>
+                          <td>
+                            @if (!isClearFinding(e) && isPotholeEvent(e) && e.size_class) {
                               <span class="size-pill" [class]="sizeClassCss(e.size_class)" title="{{ sizeClassLabel(e.size_class) }}">{{ sizeClassShort(e.size_class) }}</span>
                               <div class="muted" style="font-size:0.65rem">{{ formatSizeCm(e.width_cm_est, e.length_cm_est) }}</div>
                             } @else {
@@ -912,14 +954,14 @@
                             }
                           </td>
                           <td class="mono" style="font-size:0.75rem">
-                            @if (isPotholeEvent(e) && e.repair_materials?.length) {
+                            @if (!isClearFinding(e) && isPotholeEvent(e) && e.repair_materials?.length) {
                               {{ signalementMaterialsSummary(e) }}
-                            } @else if (isPotholeEvent(e)) {
-                              <span class="muted">—</span>
-                            } @else { — }
+                            } @else {
+                              —
+                            }
                           </td>
                           <td><span class="status-pill" [class]="statusCssClass(e.status)">{{ statusLabel(e.status) }}</span></td>
-                          <td>{{ e.prob | number:'1.2-2' }}</td>
+                          <td>{{ confidencePct(e.prob) }}</td>
                           <td>{{ e.city ?? '—' }}</td>
                           <td>{{ e.zone ?? '—' }}</td>
                           @if (canManageSignalements()) {
@@ -956,7 +998,7 @@
                                     @for (h of e.status_history; track h.ts_ms + (h.to_status ?? '')) {
                                       <li>
                                         <span class="history-date">{{ toDate(h.ts_ms) }}</span>
-                                        <span class="history-user">{{ h.user_name ?? '—' }} ({{ h.user_role ?? '—' }})</span>
+                                        <span class="history-user">{{ displayName(h.user_name) || '—' }} ({{ roleLabel(h.user_role) }})</span>
                                         <span class="history-change">
                                           @if (h.from_status) {
                                             {{ statusLabel(h.from_status) }} →
@@ -970,7 +1012,7 @@
                                     }
                                   </ul>
                                 } @else {
-                                  <p class="muted" style="margin:8px 0 0">Aucun historique (événements antérieurs à la mise à jour).</p>
+                                  <p class="muted" style="margin:8px 0 0">Aucun historique pour ce dossier.</p>
                                 }
                               </div>
                             </td>
@@ -984,7 +1026,7 @@
                 @if (selectedSignalement(); as e) {
                   <aside class="signalement-detail">
                     <div class="signalement-detail-head">
-                      <h3>Détail de détection</h3>
+                      <h3>Détail du dossier</h3>
                       <button type="button" class="btn-close-detail" (click)="closeSignalementDetail()" aria-label="Fermer">&times;</button>
                     </div>
 
@@ -1006,21 +1048,25 @@
                     <div class="signalement-detail-body">
                       <div class="detail-row">
                         <span class="detail-label">Type</span>
-                        <strong>{{ e.label }}</strong>
+                        <strong [class.type-ok]="isClearFinding(e)">{{ findingLabel(e) }}</strong>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">Modèle</span>
-                        <span>{{ e.model ?? '—' }}</span>
+                        <span class="detail-label">Contrôle</span>
+                        <span>{{ modelLabel(e.model) }}</span>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">Confiance</span>
-                        <span>{{ e.prob * 100 | number:'1.1-1' }}%</span>
+                        <span class="detail-label">Fiabilité</span>
+                        <span>{{ confidencePct(e.prob) }}</span>
                       </div>
                       <div class="detail-row">
                         <span class="detail-label">Gravité</span>
-                        <span class="severity-pill" [class]="severityCssClass(e.severity)">{{ severityLabel(e.severity) }}</span>
+                        @if (isClearFinding(e)) {
+                          <span class="muted">—</span>
+                        } @else {
+                          <span class="severity-pill" [class]="severityCssClass(e.severity)">{{ severityLabel(e.severity) }}</span>
+                        }
                       </div>
-                      @if (isPotholeEvent(e) && e.size_class) {
+                      @if (!isClearFinding(e) && isPotholeEvent(e) && e.size_class) {
                         <div class="detail-row">
                           <span class="detail-label">Taille</span>
                           <span>
@@ -1028,8 +1074,8 @@
                           </span>
                         </div>
                         <div class="detail-row">
-                          <span class="detail-label">Dimensions est.</span>
-                          <span>{{ formatSizeCm(e.width_cm_est, e.length_cm_est) }} <span class="muted">(±40 %)</span></span>
+                          <span class="detail-label">Taille approximative</span>
+                          <span>{{ formatSizeCm(e.width_cm_est, e.length_cm_est) }}</span>
                         </div>
                         <div class="detail-row">
                           <span class="detail-label">Profondeur</span>
@@ -1039,12 +1085,12 @@
                           <p class="size-calibration-note">{{ e.size_calibration?.['note'] }}</p>
                         }
                       }
-                      @if (isPotholeEvent(e)) {
+                      @if (!isClearFinding(e) && isPotholeEvent(e)) {
                         <div class="materials-inline">
                           @if (e.repair_materials?.length) {
                             <div class="detail-row">
                               <span class="detail-label">Matériaux</span>
-                              <span>{{ e.repair_materials!.length }} poste(s)</span>
+                              <span>{{ e.repair_materials!.length }} matériau{{ e.repair_materials!.length > 1 ? 'x' : '' }}</span>
                             </div>
                             @if (e.repair_assessment?.repair_type) {
                               <p class="muted" style="font-size:0.75rem">
@@ -1076,11 +1122,11 @@
                             @if (e.repair_note) { <p class="size-calibration-note">{{ e.repair_note }}</p> }
                           } @else if (canManageSignalements() && geminiConfigured()) {
                             <button type="button" class="btn btn-accent btn-sm" (click)="analyzeMaterialsForSignalement(e)" [disabled]="materialsLoadingId() === e.id">
-                              @if (materialsLoadingId() === e.id) { Analyse… } @else { <i class="bi bi-box-seam"></i> Analyser les matériaux }
+                              @if (materialsLoadingId() === e.id) { Estimation… } @else { <i class="bi bi-box-seam"></i> Estimer les matériaux }
                             </button>
-                            <span class="muted" style="font-size:0.7rem;display:block;margin-top:4px">Gemini — photo requise</span>
+                            <span class="muted" style="font-size:0.7rem;display:block;margin-top:4px">Une photo est nécessaire</span>
                           } @else if (canManageSignalements()) {
-                            <span class="muted" style="font-size:0.75rem">Gemini non configuré</span>
+                            <span class="muted" style="font-size:0.75rem">Estimation indisponible</span>
                           }
                         </div>
                       }
@@ -1093,15 +1139,15 @@
                         <span>{{ toDate(e.ts_ms) }}</span>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">Alerte</span>
-                        <span [class]="e.alert ? 'cell-alert-yes' : 'cell-alert-no'">{{ e.alert ? 'OUI' : 'NON' }}</span>
+                        <span class="detail-label">Priorité</span>
+                        <span [class]="e.alert ? 'cell-alert-yes' : 'cell-alert-no'">{{ e.alert ? 'À traiter' : 'Rien à signaler' }}</span>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">GPS</span>
-                        <span class="mono">{{ e.lat != null && e.lon != null ? e.lat + ', ' + e.lon : '—' }}</span>
+                        <span class="detail-label">Position</span>
+                        <span>{{ placeOf(e) }}</span>
                       </div>
                       <div class="detail-row">
-                        <span class="detail-label">Ville / Zone</span>
+                        <span class="detail-label">Ville / quartier</span>
                         <span>{{ e.city ?? '—' }} · {{ e.zone ?? '—' }}</span>
                       </div>
                       @if (e.video_ts_ms != null) {
@@ -1112,18 +1158,18 @@
                       }
                       @if (e.ocr_text) {
                         <div class="detail-row">
-                          <span class="detail-label">OCR</span>
-                          <span class="mono ocr-text">{{ e.ocr_text }}</span>
+                          <span class="detail-label">Texte lu</span>
+                          <span class="ocr-text">{{ e.ocr_text }}</span>
                         </div>
                       }
                       @if (e.topk?.length) {
                         <div class="signalement-topk">
-                          <strong>Top classes</strong>
+                          <strong>Autres possibilités</strong>
                           <ul class="topk-list">
                             @for (t of e.topk; track t.label) {
                               <li class="topk-item">
-                                <span>{{ t.label }}</span>
-                                <span class="topk-prob">{{ t.prob | number:'1.2-2' }}</span>
+                                <span>{{ displayLabel(t.label) }}</span>
+                                <span class="topk-prob">{{ confidencePct(t.prob) }}</span>
                               </li>
                             }
                           </ul>
@@ -1156,8 +1202,8 @@
                   <aside class="signalement-detail signalement-detail-hint">
                     <div class="empty-state">
                       <div class="empty-state-icon"><i class="bi bi-image"></i></div>
-                      <div><strong>Sélectionnez un signalement</strong></div>
-                      <p>Cliquez sur une ligne du tableau pour afficher la photo de détection et les détails complets.</p>
+                      <div><strong>Choisissez un dossier</strong></div>
+                      <p>Cliquez sur une ligne pour voir la photo et les détails.</p>
                     </div>
                   </aside>
                 }
@@ -1165,7 +1211,7 @@
               } @else {
                 <div class="empty-state">
                   <div class="empty-state-icon">•</div>
-                  <div>Aucun signalement — lancez une analyse ou modifiez les filtres</div>
+                  <div>Aucun dossier pour le moment. Analysez une photo ou une vidéo, ou changez les filtres.</div>
                 </div>
               }
             </div>
