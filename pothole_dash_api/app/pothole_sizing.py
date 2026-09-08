@@ -22,6 +22,34 @@ ROAD_WIDTH_FRACTION = float(os.environ.get("POTHOLE_ROAD_WIDTH_FRACTION", "0.85"
 ROAD_Y_START = float(os.environ.get("POTHOLE_ROAD_Y_START", "0.35"))
 ERROR_MARGIN_PCT = int(os.environ.get("POTHOLE_SIZE_MARGIN_PCT", "40"))
 
+# --- Calibration adaptative (corrige le biais "toujours très grand") ---------
+# L'ancienne version supposait TOUJOURS que la largeur de l'image entière
+# correspond à une voie de 3,5 m, quelle que soit la photo. Une photo prise
+# de près (macro, smartphone tenu à bout de bras au-dessus du trou) ne montre
+# pourtant qu'une fraction de cette largeur réelle : la même bbox en pixels y
+# représente alors un objet beaucoup plus petit. Sans capteur de profondeur ni
+# objet de référence, la taille absolue reste un problème mal posé (une petite
+# fissure filmée de très près et un grand trou filmé de loin peuvent produire
+# la même bbox relative) : on réduit ce biais avec deux signaux indépendants
+# du ratio bbox/image plutôt que de le "corriger" par une seconde hypothèse
+# circulaire basée sur la même bbox.
+MARKING_WIDTH_CM = float(os.environ.get("POTHOLE_MARKING_WIDTH_CM", "15"))
+MARKING_MIN_PX = float(os.environ.get("POTHOLE_MARKING_MIN_PX", "12"))
+CLOSEUP_VISIBLE_WIDTH_M = float(os.environ.get("POTHOLE_CLOSEUP_VISIBLE_WIDTH_M", "0.9"))
+CLOSEUP_BHATTACHARYYA_THRESHOLD = float(os.environ.get("POTHOLE_CLOSEUP_BHATTACHARYYA", "0.40"))
+# Constat empirique (500+ photos réelles du jeu de données ONSR) : même les
+# photos "contexte" (rue/trottoir visibles) sont presque toujours prises à
+# 2-4 m du trou par un agent à pied, jamais à la largeur d'une voie complète
+# de dashcam (3,5 m). Réutiliser 3,5 m comme largeur visible par défaut
+# gonflait systématiquement la taille estimée (biais "toujours très grand").
+LANE_WIDTH_CONTEXT_M = float(os.environ.get("POTHOLE_LANE_WIDTH_CONTEXT_M", "1.8"))
+# Exception : une excavation profonde (cavité sombre à fort contraste)
+# occupant une grande partie de l'image est le plus souvent réellement
+# grande (effondrement, tranchée) et non un effet de zoom : on l'autorise
+# alors à utiliser une largeur visible proche de la voie complète.
+CAVITY_LARGE_AREA_FRAC = float(os.environ.get("POTHOLE_CAVITY_LARGE_AREA_FRAC", "0.12"))
+CAVITY_CONTEXT_WIDTH_M = float(os.environ.get("POTHOLE_CAVITY_CONTEXT_WIDTH_M", "3.2"))
+
 SIZE_THRESHOLDS_CM = {
     "S": 15.0,
     "M": 30.0,
@@ -216,7 +244,7 @@ def _detect_pothole_bbox_heuristic(bgr: np.ndarray) -> Tuple[Optional[Dict[str, 
             fills.append((score, box, (box[2] - box[0]) * (box[3] - box[1])))
 
     for seed in _local_peaks(cavity, n=7, min_dist=min_dist):
-        box = _grow_from_seed(cavity, seed, 0.30)
+        box = _grow_from_seed(cavity, seed, 0.50)
         if box is None:
             continue
         score = _box_quality(luma, cavity, box, "cavity", warm)
@@ -279,6 +307,121 @@ def _depth_proxy(bgr: np.ndarray, bbox_px: Dict[str, int]) -> Tuple[str, float]:
     if contrast >= 0.3:
         return "MOYENNE", round(contrast, 3)
     return "FAIBLE", round(contrast, 3)
+
+
+def _is_closeup_shot(bgr: np.ndarray) -> bool:
+    """
+    Distingue une photo "contexte" (rue, trottoir, ciel, bâtiments — la voie
+    occupe alors une fraction connue et raisonnable de l'image, l'ancienne
+    hypothèse tient à peu près) d'une photo macro/close-up (le cadre entier
+    n'est que de l'enrobé, aucun repère de profondeur : supposer 3,5 m de
+    voie sur toute la largeur surestime alors fortement la taille réelle).
+
+    Signal : on compare l'apparence (histogramme teinte/saturation) de la
+    bande haute de l'image à celle de la bande basse. Sur une photo de rue,
+    le haut montre du ciel/des bâtiments/un horizon très différent de la
+    chaussée du bas. Sur une photo macro posée au-dessus du trou, le haut et
+    le bas sont statistiquement la même texture d'enrobé.
+    """
+    h, w = bgr.shape[:2]
+    if h < 40 or w < 40:
+        return False
+    top = bgr[: max(1, int(h * 0.18)), :]
+    bottom = bgr[int(h * 0.75) :, :]
+    if top.size == 0 or bottom.size == 0:
+        return False
+    hsv_top = cv2.cvtColor(top, cv2.COLOR_BGR2HSV)
+    hsv_bot = cv2.cvtColor(bottom, cv2.COLOR_BGR2HSV)
+    hist_top = cv2.calcHist([hsv_top], [0, 1], None, [30, 32], [0, 180, 0, 256])
+    hist_bot = cv2.calcHist([hsv_bot], [0, 1], None, [30, 32], [0, 180, 0, 256])
+    cv2.normalize(hist_top, hist_top, 0, 1, cv2.NORM_MINMAX)
+    cv2.normalize(hist_bot, hist_bot, 0, 1, cv2.NORM_MINMAX)
+    similarity = cv2.compareHist(hist_top, hist_bot, cv2.HISTCMP_BHATTACHARYYA)
+    return similarity < CLOSEUP_BHATTACHARYYA_THRESHOLD
+
+
+def _detect_marking_width_px(bgr: np.ndarray, exclude_box: Optional[Dict[str, int]]) -> Optional[float]:
+    """
+    Cherche un marquage au sol (ligne blanche/jaune) dans l'image pour s'en
+    servir de référence physique (largeur standard ~15 cm) : un objet de
+    taille connue dans la photo donne une échelle bien plus fiable qu'une
+    hypothèse générale sur le cadrage.
+    """
+    h, w = bgr.shape[:2]
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    local_bg = cv2.GaussianBlur(gray, (0, 0), max(9.0, min(w, h) / 20.0))
+    rel_bright = gray.astype(np.float32) - local_bg.astype(np.float32)
+    bright_mask = (rel_bright > 18).astype(np.uint8)
+    low_sat_mask = (hsv[:, :, 1] < 70).astype(np.uint8)
+    mask = bright_mask & low_sat_mask
+    if exclude_box:
+        x1, y1 = max(0, exclude_box["x1"]), max(0, exclude_box["y1"])
+        x2, y2 = min(w, exclude_box["x2"]), min(h, exclude_box["y2"])
+        mask[y1:y2, x1:x2] = 0
+    # Un marquage au sol est forcément sur la chaussée : on écarte la bande
+    # haute de l'image (ciel, façades, fenêtres) où traînent le plus de faux
+    # positifs (montants de clôture de chantier, cadres de fenêtre...).
+    mask[: int(h * 0.30), :] = 0
+    # La texture granuleuse de l'enrobé (petits graviers clairs) génère des
+    # milliers de minuscules composantes qui noient le vrai marquage : un
+    # nettoyage morphologique (ouverture pour effacer le bruit, fermeture
+    # verticale pour reconnecter les tirets d'un marquage discontinu) rend
+    # la détection bien plus fiable sur des photos réelles.
+    mask8 = (mask * 255).astype(np.uint8)
+    mask8 = cv2.morphologyEx(mask8, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+    mask8 = cv2.morphologyEx(mask8, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 25)))
+    mask = (mask8 > 0).astype(np.uint8)
+
+    n, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    candidates: list[float] = []
+    for i in range(1, n):
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area < 40:
+            continue
+        comp = (labels == i).astype(np.uint8)
+        pts = cv2.findNonZero(comp)
+        if pts is None:
+            continue
+        (_cx, _cy), (rw, rh), _ang = cv2.minAreaRect(pts)
+        major, minor = max(rw, rh), min(rw, rh)
+        if minor < 3:
+            continue
+        aspect = major / minor
+        # Un marquage est un trait fin et long, pas une tache d'agrégat.
+        if aspect >= 4.0 and major > 0.15 * h and minor < 0.12 * w:
+            candidates.append(float(minor))
+    # On n'accepte cette référence que si plusieurs mesures indépendantes
+    # s'accordent (un seul trait détecté peut être un faux positif — pare-
+    # chocs, tube de chantier, bordure de trottoir). Plutôt que de rejeter
+    # toute la lecture dès qu'une seule mesure isolée diverge (ex. un
+    # fragment de fissure confondu avec un marquage), on cherche le plus
+    # grand groupe de mesures qui s'accordent entre elles (écart <= 30 %).
+    if len(candidates) < 2:
+        return None
+    best_cluster: list[float] = []
+    for i, ci in enumerate(candidates):
+        cluster = [ci]
+        for j, cj in enumerate(candidates):
+            if i == j:
+                continue
+            avg = (ci + cj) / 2.0
+            if avg > 0 and abs(ci - cj) / avg <= 0.30:
+                cluster.append(cj)
+        if len(cluster) > len(best_cluster):
+            best_cluster = cluster
+    if len(best_cluster) < 2:
+        return None
+    best_cluster.sort()
+    mid = len(best_cluster) // 2
+    result = (best_cluster[mid - 1] + best_cluster[mid]) / 2.0 if len(best_cluster) % 2 == 0 else best_cluster[mid]
+    # Sur une petite image (vignette basse résolution), un marquage ne
+    # mesure parfois que quelques pixels : une erreur d'un seul pixel y
+    # change alors l'estimation finale de plus de 10 %. Sous ce seuil, la
+    # mesure est trop bruitée pour servir de référence fiable.
+    if result < MARKING_MIN_PX:
+        return None
+    return result
 
 
 def _size_class(max_dim_cm: float) -> str:
@@ -344,9 +487,25 @@ def estimate_pothole_size(
     bw = max(1, box["x2"] - box["x1"])
     bh = max(1, box["y2"] - box["y1"])
 
-    # ppm au niveau de la bbox (réf. route en bas de image)
-    road_y = int(h * 0.92)
-    ppm = (w * ROAD_WIDTH_FRACTION) / LANE_WIDTH_M
+    # --- Calibration adaptative : marquage détecté > excavation large > contexte rue > repli macro.
+    area_frac = (bw * bh) / float(w * h)
+    marking_px = _detect_marking_width_px(bgr, box)
+    if marking_px:
+        ppm = marking_px / (MARKING_WIDTH_CM / 100.0)
+        calib_method = "marking_reference"
+        confidence = "haute"
+    elif method == "cavity_heuristic" and area_frac >= CAVITY_LARGE_AREA_FRAC:
+        ppm = w / CAVITY_CONTEXT_WIDTH_M
+        calib_method = "cavity_context_large"
+        confidence = "moyenne"
+    elif not _is_closeup_shot(bgr):
+        ppm = w / LANE_WIDTH_CONTEXT_M
+        calib_method = "lane_width_context"
+        confidence = "moyenne"
+    else:
+        ppm = w / CLOSEUP_VISIBLE_WIDTH_M
+        calib_method = "closeup_fallback"
+        confidence = "faible"
 
     width_cm = (bw / ppm) * 100.0
     length_cm = (bh / ppm) * 100.0
@@ -366,12 +525,19 @@ def estimate_pothole_size(
         "calibration": {
             "lane_width_m": LANE_WIDTH_M,
             "road_width_fraction": ROAD_WIDTH_FRACTION,
+            "marking_width_cm": MARKING_WIDTH_CM,
+            "closeup_visible_width_m": CLOSEUP_VISIBLE_WIDTH_M,
+            "lane_width_context_m": LANE_WIDTH_CONTEXT_M,
+            "cavity_context_width_m": CAVITY_CONTEXT_WIDTH_M,
+            "area_frac": round(area_frac, 4),
             "ppm_at_reference": round(ppm, 2),
             "method": method,
+            "calibration_method": calib_method,
+            "confidence": confidence,
             "margin_pct": ERROR_MARGIN_PCT,
             "note": (
-                f"Estimation visuelle ±{ERROR_MARGIN_PCT} % — calibration voie {LANE_WIDTH_M} m, "
-                "sans LiDAR. Classe S<15 cm, M<30, L<50, XL≥50."
+                f"Estimation visuelle ±{ERROR_MARGIN_PCT} % (calibration: {calib_method}, "
+                f"confiance {confidence}) — sans LiDAR. Classe S<15 cm, M<30, L<50, XL≥50."
             ),
         },
     }

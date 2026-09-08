@@ -23,6 +23,10 @@ export type RepairAnalysis = {
   gemini_quota_exceeded?: boolean;
 };
 
+export function compactRepairMaterials(list?: RepairMaterial[] | null, max = 5): RepairMaterial[] {
+  return (list ?? []).slice(0, max);
+}
+
 export function formatMaterialLine(m: RepairMaterial): string {
   const name = m.name ?? '—';
   const qty = m.quantity;

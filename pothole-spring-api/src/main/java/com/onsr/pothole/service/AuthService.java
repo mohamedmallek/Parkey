@@ -4,7 +4,9 @@ import com.onsr.pothole.dto.AuthResponse;
 import com.onsr.pothole.dto.LoginRequest;
 import com.onsr.pothole.dto.UserResponse;
 import com.onsr.pothole.model.User;
+import com.onsr.pothole.model.UserSession;
 import com.onsr.pothole.repository.UserRepository;
+import com.onsr.pothole.repository.UserSessionRepository;
 import com.onsr.pothole.security.JwtService;
 import com.onsr.pothole.security.UserPrincipal;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +33,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
@@ -38,11 +41,13 @@ public class AuthService {
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             UserRepository userRepository,
+            UserSessionRepository userSessionRepository,
             PasswordEncoder passwordEncoder,
             EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.userSessionRepository = userSessionRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
@@ -55,7 +60,40 @@ public class AuthService {
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
         User user = principal.getUser();
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
-        return new AuthResponse(token, UserResponse.from(user));
+
+        UserSession session = new UserSession();
+        session.setUserId(user.getId());
+        Instant now = Instant.now();
+        session.setLoginAt(now);
+        session.setLastHeartbeatAt(now);
+        UserSession savedSession = userSessionRepository.save(session);
+
+        return new AuthResponse(token, savedSession.getId(), UserResponse.from(user));
+    }
+
+    /** Signal périodique envoyé par le front tant que l'app reste ouverte : marque la session comme active. */
+    public void heartbeat(String userId, String sessionId) {
+        if (!StringUtils.hasText(sessionId)) return;
+        userSessionRepository.findByIdAndUserId(sessionId, userId).ifPresent(s -> {
+            if (s.getLogoutAt() == null) {
+                s.setLastHeartbeatAt(Instant.now());
+                userSessionRepository.save(s);
+            }
+        });
+    }
+
+    /** Déconnexion explicite : clôture proprement la session (heure de fin exacte, pas une estimation). */
+    public void logout(String userId, String sessionId) {
+        if (!StringUtils.hasText(sessionId)) return;
+        userSessionRepository.findByIdAndUserId(sessionId, userId).ifPresent(s -> {
+            if (s.getLogoutAt() == null) {
+                Instant now = Instant.now();
+                s.setLogoutAt(now);
+                s.setLastHeartbeatAt(now);
+                s.setEndReason("logout");
+                userSessionRepository.save(s);
+            }
+        });
     }
 
     public UserResponse me(UserPrincipal principal) {

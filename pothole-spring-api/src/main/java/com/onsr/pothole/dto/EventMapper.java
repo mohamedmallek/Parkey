@@ -67,6 +67,13 @@ public final class EventMapper {
         m.put("repair_method", e.getRepairMethod());
         m.put("repair_disclaimer", e.getRepairDisclaimer());
         m.put("repair_assessment", e.getRepairAssessment());
+        m.put("after_frame_path", e.getAfterFramePath());
+        m.put("after_ts_ms", e.getAfterTsMs());
+        m.put("has_after_photo", e.getAfterFramePath() != null && !e.getAfterFramePath().isBlank());
+        m.put("assigned_user_id", e.getAssignedUserId());
+        m.put("assigned_user_name", e.getAssignedUserName());
+        m.put("assigned_at_ms", e.getAssignedAtMs());
+        m.put("confirmed_at_ms", e.getConfirmedAtMs());
         return m;
     }
 

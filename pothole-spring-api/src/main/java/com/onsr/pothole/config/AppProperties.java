@@ -9,6 +9,7 @@ public class AppProperties {
     private Cors cors = new Cors();
     private Ml ml = new Ml();
     private Mail mail = new Mail();
+    private Sla sla = new Sla();
 
     public Jwt getJwt() {
         return jwt;
@@ -40,6 +41,14 @@ public class AppProperties {
 
     public void setMail(Mail mail) {
         this.mail = mail;
+    }
+
+    public Sla getSla() {
+        return sla;
+    }
+
+    public void setSla(Sla sla) {
+        this.sla = sla;
     }
 
     public static class Jwt {
@@ -123,6 +132,46 @@ public class AppProperties {
 
         public void setAppUrl(String appUrl) {
             this.appUrl = appUrl;
+        }
+    }
+
+    /** Délais cibles (SLA) de traitement d'un dossier, en heures, par niveau de gravité. */
+    public static class Sla {
+        private long criticalHours = 48;
+        private long highHours = 120;
+        private long mediumHours = 360;
+        private long lowHours = 720;
+
+        public long getCriticalHours() {
+            return criticalHours;
+        }
+
+        public void setCriticalHours(long criticalHours) {
+            this.criticalHours = criticalHours;
+        }
+
+        public long getHighHours() {
+            return highHours;
+        }
+
+        public void setHighHours(long highHours) {
+            this.highHours = highHours;
+        }
+
+        public long getMediumHours() {
+            return mediumHours;
+        }
+
+        public void setMediumHours(long mediumHours) {
+            this.mediumHours = mediumHours;
+        }
+
+        public long getLowHours() {
+            return lowHours;
+        }
+
+        public void setLowHours(long lowHours) {
+            this.lowHours = lowHours;
         }
     }
 }

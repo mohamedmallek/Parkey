@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/predict", "/api/video/**", "/api/budget/**", "/api/materials/**").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR")
                         .requestMatchers(HttpMethod.GET, "/api/budget/status", "/api/materials/status").hasAnyRole("SUPERADMIN", "ADMIN", "OPERATOR", "VIEWER")
                         .requestMatchers("/api/users/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/admin/user-activity/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/auth/me").authenticated()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())

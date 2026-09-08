@@ -63,6 +63,12 @@ public class RoadEvent {
     private String repairMethod;
     private String repairDisclaimer;
     private java.util.Map<String, Object> repairAssessment;
+    private String afterFramePath;
+    private Long afterTsMs;
+    private String assignedUserId;
+    private String assignedUserName;
+    private Long assignedAtMs;
+    private Long confirmedAtMs;
 
     public String getId() {
         return id;
@@ -454,5 +460,53 @@ public class RoadEvent {
 
     public void setRepairAssessment(java.util.Map<String, Object> repairAssessment) {
         this.repairAssessment = repairAssessment;
+    }
+
+    public String getAfterFramePath() {
+        return afterFramePath;
+    }
+
+    public void setAfterFramePath(String afterFramePath) {
+        this.afterFramePath = afterFramePath;
+    }
+
+    public Long getAfterTsMs() {
+        return afterTsMs;
+    }
+
+    public void setAfterTsMs(Long afterTsMs) {
+        this.afterTsMs = afterTsMs;
+    }
+
+    public String getAssignedUserId() {
+        return assignedUserId;
+    }
+
+    public void setAssignedUserId(String assignedUserId) {
+        this.assignedUserId = assignedUserId;
+    }
+
+    public String getAssignedUserName() {
+        return assignedUserName;
+    }
+
+    public void setAssignedUserName(String assignedUserName) {
+        this.assignedUserName = assignedUserName;
+    }
+
+    public Long getAssignedAtMs() {
+        return assignedAtMs;
+    }
+
+    public void setAssignedAtMs(Long assignedAtMs) {
+        this.assignedAtMs = assignedAtMs;
+    }
+
+    public Long getConfirmedAtMs() {
+        return confirmedAtMs;
+    }
+
+    public void setConfirmedAtMs(Long confirmedAtMs) {
+        this.confirmedAtMs = confirmedAtMs;
     }
 }

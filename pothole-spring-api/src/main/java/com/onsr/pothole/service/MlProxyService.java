@@ -4,6 +4,7 @@ import com.onsr.pothole.config.AppProperties;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -23,7 +24,10 @@ public class MlProxyService {
     private final EventService eventService;
 
     public MlProxyService(AppProperties appProperties, EventService eventService) {
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15_000);
+        factory.setReadTimeout(3_600_000);
+        this.restTemplate = new RestTemplate(factory);
         this.appProperties = appProperties;
         this.eventService = eventService;
     }
@@ -114,19 +118,37 @@ public class MlProxyService {
         Object events = body.get("events");
         if (events instanceof List<?> list && !list.isEmpty()) {
             for (Object item : list) {
-                if (item instanceof Map<?, ?> map) {
+                if (item instanceof Map<?, ?> map && shouldPersistMlEvent((Map<String, Object>) map)) {
                     eventService.saveFromApiMap((Map<String, Object>) map, userId);
                 }
             }
             return;
         }
         Object event = body.get("event");
-        if (event instanceof Map<?, ?> map) {
+        if (event instanceof Map<?, ?> map && shouldPersistMlEvent((Map<String, Object>) map)) {
             eventService.saveFromApiMap((Map<String, Object>) map, userId);
             return;
         }
         if (body.get("events") == null && body.containsKey("label") && Boolean.TRUE.equals(body.get("alert"))) {
             eventService.saveFromApiMap(body, userId);
         }
+    }
+
+    private boolean shouldPersistMlEvent(Map<String, Object> map) {
+        if (isTruthyAlert(map.get("alert"))) {
+            return true;
+        }
+        Object source = map.get("source");
+        return source == null || !"live-camera".equals(String.valueOf(source));
+    }
+
+    private boolean isTruthyAlert(Object alert) {
+        if (Boolean.TRUE.equals(alert)) {
+            return true;
+        }
+        if (alert instanceof Number n) {
+            return n.doubleValue() != 0;
+        }
+        return alert instanceof String s && ("true".equalsIgnoreCase(s) || "1".equals(s));
     }
 }

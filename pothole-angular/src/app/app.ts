@@ -1,5 +1,5 @@
-import { Component, signal, viewChild, ElementRef, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, HostListener, signal, viewChild, viewChildren, ElementRef, OnDestroy } from '@angular/core';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import {
@@ -8,11 +8,14 @@ import {
   type ModelInfo,
   type PredictResponse,
   type SignDetection,
+  type UserActivity,
+  type UserSessionEntry,
 } from './api.service';
 import { AuthService, type UserInfo } from './auth.service';
 import { EventsMapComponent } from './events-map.component';
 import { EventFrameComponent } from './event-frame.component';
 import { CountUpDirective } from './count-up.directive';
+import { DashboardChartsComponent } from './dashboard-charts.component';
 import {
   ALL_SEVERITIES,
   ALL_STATUSES,
@@ -31,15 +34,29 @@ import {
   sizeClassShort,
 } from './pothole-size.util';
 import {
+  compactRepairMaterials,
   formatMaterialLine,
-  repairConfidenceLabel,
-  repairMethodLabel,
   repairTypeLabel,
   type RepairMaterial,
 } from './materials.util';
 import { confidencePct, displayLabel, findingLabel, isClearFinding, modelLabel, placeLabel, roleLabel } from './ui-labels';
+import {
+  averageConfidencePct,
+  averageResolutionDays,
+  citiesCoveredCount,
+  depthBreakdown,
+  potholeCountTotal,
+  severityBreakdown,
+  signsDamageCountTotal,
+  sizeBreakdown,
+  sourceBreakdown,
+  statusBreakdown,
+  topByCount,
+  totalBudgetMidTnd,
+  totalBudgetRangeLabel,
+} from './stats.util';
 
-type AppSection = 'dashboard' | 'detection' | 'live' | 'video' | 'events' | 'gallery' | 'map' | 'users';
+type AppSection = 'dashboard' | 'detection' | 'live' | 'video' | 'events' | 'gallery' | 'map' | 'users' | 'activity';
 type GalleryPhotoKind = 'all' | 'pothole' | 'signs_damage';
 
 type GalleryDayGroup = {
@@ -50,17 +67,29 @@ type GalleryDayGroup = {
   signsCount: number;
 };
 
+type AccueilScene = {
+  id: 'city' | 'sign' | 'pothole';
+  src: string;
+  label: string;
+  kicker: string;
+  title: string;
+  text: string;
+  target: AppSection;
+};
+
 @Component({
   selector: 'app-main',
-  imports: [CommonModule, EventsMapComponent, EventFrameComponent, CountUpDirective],
+  imports: [CommonModule, NgOptimizedImage, EventsMapComponent, EventFrameComponent, CountUpDirective, DashboardChartsComponent],
   styleUrl: './app.scss',
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App implements OnDestroy {
   protected readonly title = signal('pothole-angular');
 
   protected readonly file = signal<File | null>(null);
   protected readonly previewUrl = signal<string | null>(null);
+  protected readonly photoDragOver = signal(false);
   protected readonly result = signal<PredictResponse | null>(null);
   protected readonly error = signal<string>('');
   protected readonly loading = signal<boolean>(false);
@@ -71,6 +100,14 @@ export class App implements OnDestroy {
   protected readonly eventFilterCity = signal('');
   protected readonly eventFilterSeverity = signal('');
   protected readonly statusUpdatingId = signal<string | null>(null);
+  protected readonly assignUpdatingId = signal<string | null>(null);
+  protected readonly resolveEventTarget = signal<EventRecord | null>(null);
+  protected readonly resolveAfterFile = signal<File | null>(null);
+  protected readonly resolveAfterPreview = signal<string | null>(null);
+  protected readonly resolveBeforeUrl = signal<string | null>(null);
+  protected readonly resolveError = signal('');
+  protected readonly resolveLoading = signal(false);
+  protected readonly signalementAfterUrl = signal<string | null>(null);
   protected readonly expandedHistoryId = signal<string | null>(null);
   protected readonly selectedSignalement = signal<EventRecord | null>(null);
   protected readonly signalementFrameUrl = signal<string | null>(null);
@@ -88,9 +125,8 @@ export class App implements OnDestroy {
   protected readonly depthProxyLabel = depthProxyLabel;
   protected readonly formatSizeCm = formatSizeCm;
   protected readonly isPotholeEvent = isPotholeEvent;
+  protected readonly compactRepairMaterials = compactRepairMaterials;
   protected readonly formatMaterialLine = formatMaterialLine;
-  protected readonly repairConfidenceLabel = repairConfidenceLabel;
-  protected readonly repairMethodLabel = repairMethodLabel;
   protected readonly repairTypeLabel = repairTypeLabel;
   protected readonly roleLabel = roleLabel;
   protected readonly displayLabel = displayLabel;
@@ -129,8 +165,8 @@ export class App implements OnDestroy {
   protected readonly lon = signal<number | null>(null);
   protected readonly pendingMapsEvent = signal<EventRecord | null>(null);
   protected readonly videoFile = signal<File | null>(null);
-  protected readonly sampleFps = signal<number>(1);
-  protected readonly maxVideoFrames = signal<number>(0);
+  protected readonly sampleFps = signal<number>(0.5);
+  protected readonly maxVideoFrames = signal<number>(40);
   protected readonly videoDurationSec = signal<number>(0);
   protected readonly videoLoading = signal<boolean>(false);
   protected readonly videoError = signal<string>('');
@@ -139,7 +175,7 @@ export class App implements OnDestroy {
   protected readonly videoSummary = signal<{ pothole: number; signs_damage: number } | null>(null);
   protected readonly videoNote = signal<string>('');
   protected readonly videoPreviewUrl = signal<string | null>(null);
-  protected readonly ocrEnabled = signal<boolean>(true);
+  protected readonly ocrEnabled = signal<boolean>(false);
   protected readonly videoPlayer = viewChild<ElementRef<HTMLVideoElement>>('videoPlayer');
   protected readonly models = signal<ModelInfo[]>([
     { id: 'pothole', title: 'Nids-de-poule', task: 'pothole', kind: 'classifier', ready: true, path: 'models/model.pt' },
@@ -178,6 +214,8 @@ export class App implements OnDestroy {
   protected readonly liveAlerts = signal<EventRecord[]>([]);
   protected readonly liveFramesAnalyzed = signal(0);
   protected readonly liveLastResult = signal<PredictResponse | null>(null);
+  protected readonly liveLastPothole = signal<PredictResponse | null>(null);
+  protected readonly liveLastSigns = signal<PredictResponse | null>(null);
   protected readonly liveVideo = viewChild<ElementRef<HTMLVideoElement>>('liveVideo');
   protected readonly liveCanvas = viewChild<ElementRef<HTMLCanvasElement>>('liveCanvas');
   private liveStream: MediaStream | null = null;
@@ -196,6 +234,16 @@ export class App implements OnDestroy {
   protected readonly newUserEmail = signal('');
   protected readonly newUserRole = signal<'ADMIN' | 'OPERATOR' | 'VIEWER'>('OPERATOR');
   protected readonly newUserPassword = signal('');
+  // --- Suivi d'activité (Superadmin/Admin) ---
+  protected readonly activityUsers = signal<UserActivity[]>([]);
+  protected readonly activityLoading = signal(false);
+  protected readonly activityError = signal('');
+  protected readonly expandedActivityUserId = signal<string | null>(null);
+  protected readonly activitySessions = signal<UserSessionEntry[]>([]);
+  protected readonly activitySessionsLoading = signal(false);
+  protected readonly activitySessionsPage = signal(0);
+  protected readonly activitySessionsTotalPages = signal(0);
+  private activityRefreshTimer: ReturnType<typeof setInterval> | null = null;
   protected readonly galleryPhotoKind = signal<GalleryPhotoKind>('all');
   protected readonly galleryCollapsedDays = signal<Set<string>>(new Set());
   protected readonly galleryMoreByDay = signal<Record<string, number>>({});
@@ -204,6 +252,40 @@ export class App implements OnDestroy {
   protected readonly galleryDeleting = signal(false);
   protected readonly galleryError = signal('');
   private readonly galleryPageSize = 12;
+  protected readonly dashboardTotal = signal(0);
+  protected readonly dashboardAlerts = signal(0);
+  protected readonly accueilScenes: AccueilScene[] = [
+    {
+      id: 'city',
+      src: 'assets/videos/accueil-city.mp4',
+      label: 'Global',
+      kicker: '01 · Balayage nocturne',
+      title: 'Le réseau s’allume',
+      text: 'Parkey survole la ville. Les nœuds cyan pulsent : le réseau écoute les routes.',
+      target: 'map',
+    },
+    {
+      id: 'sign',
+      src: 'assets/videos/accueil-sign.mp4',
+      label: 'Panneau',
+      kicker: '02 · Détection',
+      title: 'Panneau abîmé signalé',
+      text: 'Le cadre cyan se verrouille. Un panneau endommagé est isolé et transmis.',
+      target: 'video',
+    },
+    {
+      id: 'pothole',
+      src: 'assets/videos/accueil-pothole.mp4',
+      label: 'Chaussée',
+      kicker: '03 · Détection',
+      title: 'Nid-de-poule prioritaire',
+      text: 'La chaussée révèle un creux. Parkey mesure, classe et alerte les équipes.',
+      target: 'live',
+    },
+  ];
+  protected readonly accueilSceneIndex = signal(0);
+  protected readonly accueilStoryVideos = viewChildren<ElementRef<HTMLVideoElement>>('accueilStoryVideo');
+  private accueilStoryTimer: ReturnType<typeof setInterval> | null = null;
 
   /** Références stables pour le composant carte (évite bind dans le template). */
   protected readonly frameUrlFn = (id: string) => this.api.getEventFrameUrl(id);
@@ -227,6 +309,7 @@ export class App implements OnDestroy {
   }
 
   doLogout() {
+    this.stopAccueilStory();
     this.auth.logout();
     this.loginEmail.set('');
     this.loginPassword.set('');
@@ -238,6 +321,8 @@ export class App implements OnDestroy {
     this.forgotMessage.set('');
     this.resetChangeForm();
     this.activeSection.set('dashboard');
+    this.dashboardTotal.set(0);
+    this.dashboardAlerts.set(0);
   }
 
   acceptChangePassword() {
@@ -330,7 +415,11 @@ export class App implements OnDestroy {
   }
 
   ngOnDestroy() {
+    this.stopAccueilStory();
     this.stopLiveCamera();
+    this.closeResolveModal();
+    this.closeSignalementDetail();
+    this.stopActivityRefresh();
   }
 
   sectionTitle(): string {
@@ -349,8 +438,10 @@ export class App implements OnDestroy {
         return 'Carte';
       case 'users':
         return 'Équipe';
+      case 'activity':
+        return 'Suivi utilisateurs';
       default:
-        return 'Accueil';
+        return 'Aperçu général';
     }
   }
 
@@ -359,22 +450,33 @@ export class App implements OnDestroy {
   }
 
   setVideoPace(value: string) {
-    this.sampleFps.set(this.parseNumber(value));
+    const fps = this.parseNumber(value);
+    this.sampleFps.set(fps);
+    if (fps <= 0.5) this.maxVideoFrames.set(40);
+    else if (fps <= 1) this.maxVideoFrames.set(80);
+    else this.maxVideoFrames.set(160);
   }
 
   setSection(section: AppSection) {
     if (this.activeSection() === 'live' && section !== 'live') {
       this.stopLiveCamera();
     }
+    if (section !== 'activity') {
+      this.stopActivityRefresh();
+    }
     this.activeSection.set(section);
     this.sidebarOpen.set(false);
-    if (section === 'dashboard' || section === 'gallery') {
+    if (section === 'dashboard') {
+      this.loadDashboardStats();
       this.refreshEvents(false);
+      this.startAccueilStory();
+      return;
     }
-    if (section === 'map' || section === 'events') {
-      this.refreshEvents();
+    this.stopAccueilStory();
+    if (section === 'gallery' || section === 'map' || section === 'events') {
+      this.refreshEvents(section === 'gallery' ? false : section !== 'map');
     }
-    if (section === 'detection' || section === 'live' || section === 'dashboard') {
+    if (section === 'detection' || section === 'live') {
       this.ensureLocation();
     }
     if (section === 'video') {
@@ -383,6 +485,9 @@ export class App implements OnDestroy {
         this.mapSeekEvent.set(null);
         setTimeout(() => this.seekVideoToEvent(ev), 400);
       }
+    }
+    if (section === 'activity') {
+      this.startActivityRefresh();
     }
   }
 
@@ -397,6 +502,11 @@ export class App implements OnDestroy {
 
   toggleSidebar() {
     this.sidebarOpen.update((v) => !v);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeSidebarOnEscape() {
+    if (this.sidebarOpen()) this.sidebarOpen.set(false);
   }
 
   canAnalyze() {
@@ -671,14 +781,17 @@ export class App implements OnDestroy {
   openSignalementDetail(e: EventRecord) {
     this.selectedSignalement.set(e);
     this.loadSignalementFrame(e);
+    this.loadSignalementAfterFrame(e);
   }
 
   closeSignalementDetail() {
     this.selectedSignalement.set(null);
     this.revokeSignalementFrame();
+    this.revokeSignalementAfterFrame();
   }
 
   private signalementFrameObjectUrl: string | null = null;
+  private signalementAfterObjectUrl: string | null = null;
 
   private revokeSignalementFrame() {
     if (this.signalementFrameObjectUrl) {
@@ -688,6 +801,26 @@ export class App implements OnDestroy {
     this.signalementFrameUrl.set(null);
     this.signalementFrameLoading.set(false);
     this.signalementFrameError.set('');
+  }
+
+  private revokeSignalementAfterFrame() {
+    if (this.signalementAfterObjectUrl) {
+      URL.revokeObjectURL(this.signalementAfterObjectUrl);
+      this.signalementAfterObjectUrl = null;
+    }
+    this.signalementAfterUrl.set(null);
+  }
+
+  loadSignalementAfterFrame(e: EventRecord) {
+    this.revokeSignalementAfterFrame();
+    if (!e.has_after_photo) return;
+    this.api.getAfterFrame(e.id).subscribe({
+      next: (blob) => {
+        this.signalementAfterObjectUrl = URL.createObjectURL(blob);
+        this.signalementAfterUrl.set(this.signalementAfterObjectUrl);
+      },
+      error: () => this.signalementAfterUrl.set(null),
+    });
   }
 
   loadSignalementFrame(e: EventRecord) {
@@ -766,6 +899,7 @@ export class App implements OnDestroy {
         this.events.update((list) => list.map((e) => (e.id === updated.id ? updated : e)));
         if (this.selectedSignalement()?.id === updated.id) {
           this.selectedSignalement.set(updated);
+          this.loadSignalementAfterFrame(updated);
         }
         this.statusUpdatingId.set(null);
       },
@@ -789,15 +923,173 @@ export class App implements OnDestroy {
   }
 
   resolveEvent(event: EventRecord) {
-    this.updateEventStatus(event, 'RESOLU', 'Réparation effectuée');
+    this.openResolveModal(event);
+  }
+
+  operators(): UserInfo[] {
+    return this.users().filter((u) => u.role === 'OPERATOR' && u.enabled);
+  }
+
+  canPickAssignee(): boolean {
+    return this.canManageTeam();
+  }
+
+  canTakeEvent(e: EventRecord): boolean {
+    return this.auth.user()?.role === 'OPERATOR' && !e.assigned_user_id;
+  }
+
+  isAssignedToMe(e: EventRecord): boolean {
+    const me = this.auth.user();
+    return !!me && e.assigned_user_id === me.id;
+  }
+
+  assignEvent(event: EventRecord, userId: string | null) {
+    this.assignUpdatingId.set(event.id);
+    this.eventsError.set('');
+    this.api.assignEvent(event.id, userId).subscribe({
+      next: (res) => {
+        const updated = res.event;
+        this.events.update((list) => list.map((e) => (e.id === updated.id ? updated : e)));
+        if (this.selectedSignalement()?.id === updated.id) {
+          this.selectedSignalement.set(updated);
+        }
+        this.assignUpdatingId.set(null);
+      },
+      error: (err) => {
+        this.assignUpdatingId.set(null);
+        this.eventsError.set(err?.error?.error ?? 'Impossible d’assigner ce dossier.');
+      },
+    });
+  }
+
+  takeEvent(event: EventRecord) {
+    const me = this.auth.user();
+    if (!me) return;
+    this.assignEvent(event, me.id);
+  }
+
+  unassignEvent(event: EventRecord) {
+    this.assignEvent(event, null);
+  }
+
+  onAssignSelect(event: EventRecord, value: string) {
+    this.assignEvent(event, value || null);
+  }
+
+  slaCssClass(e: EventRecord): string {
+    if (!e.confirmed_at_ms) return 'sla-pending';
+    return e.sla_overdue ? 'sla-overdue' : 'sla-ontrack';
+  }
+
+  slaLabel(e: EventRecord): string {
+    if (!e.confirmed_at_ms) return 'En attente de confirmation';
+    return e.sla_overdue ? 'En retard' : 'Dans les délais';
+  }
+
+  slaDueLabel(e: EventRecord): string {
+    if (!e.sla_due_ms) return '—';
+    return this.toDate(e.sla_due_ms);
+  }
+
+  openResolveModal(event: EventRecord) {
+    this.closeResolveModal();
+    this.resolveEventTarget.set(event);
+    this.api.getEventFrame(event.id).subscribe({
+      next: (blob) => {
+        if (this.resolveEventTarget()?.id !== event.id) return;
+        this.resolveBeforeUrl.set(URL.createObjectURL(blob));
+      },
+      error: () => {
+        if (this.resolveEventTarget()?.id === event.id) this.resolveBeforeUrl.set(null);
+      },
+    });
+    if (event.has_after_photo) {
+      this.api.getAfterFrame(event.id).subscribe({
+        next: (blob) => {
+          if (this.resolveEventTarget()?.id !== event.id) return;
+          this.resolveAfterPreview.set(URL.createObjectURL(blob));
+        },
+        error: () => {
+          if (this.resolveEventTarget()?.id === event.id) this.resolveAfterPreview.set(null);
+        },
+      });
+    }
+  }
+
+  closeResolveModal() {
+    const preview = this.resolveAfterPreview();
+    if (preview) URL.revokeObjectURL(preview);
+    const before = this.resolveBeforeUrl();
+    if (before) URL.revokeObjectURL(before);
+    this.resolveEventTarget.set(null);
+    this.resolveAfterFile.set(null);
+    this.resolveAfterPreview.set(null);
+    this.resolveBeforeUrl.set(null);
+    this.resolveError.set('');
+    this.resolveLoading.set(false);
+  }
+
+  onResolveAfterSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    const prev = this.resolveAfterPreview();
+    if (prev) URL.revokeObjectURL(prev);
+    this.resolveAfterFile.set(file);
+    this.resolveAfterPreview.set(file ? URL.createObjectURL(file) : null);
+    this.resolveError.set('');
+  }
+
+  confirmResolve() {
+    const event = this.resolveEventTarget();
+    const file = this.resolveAfterFile();
+    if (!event) return;
+    if (!file && !event.has_after_photo) {
+      this.resolveError.set('Ajoutez une photo après réparation pour clôturer le dossier.');
+      return;
+    }
+    this.resolveLoading.set(true);
+    this.resolveError.set('');
+    const finishResolve = (updated: EventRecord) => {
+      this.events.update((list) => list.map((e) => (e.id === updated.id ? updated : e)));
+      this.api.updateEventStatus(updated.id, 'RESOLU', 'Réparation vérifiée avec photo après').subscribe({
+        next: (res) => {
+          const done = res.event;
+          this.events.update((list) => list.map((e) => (e.id === done.id ? done : e)));
+          if (this.selectedSignalement()?.id === done.id) {
+            this.selectedSignalement.set(done);
+            this.loadSignalementAfterFrame(done);
+          }
+          this.statusUpdatingId.set(null);
+          this.closeResolveModal();
+        },
+        error: (err) => {
+          this.resolveLoading.set(false);
+          this.resolveError.set(err?.error?.error ?? 'Photo enregistrée, mais le statut n’a pas pu être mis à jour.');
+        },
+      });
+    };
+    if (!file) {
+      finishResolve(event);
+      return;
+    }
+    this.api.uploadAfterPhoto(event.id, file).subscribe({
+      next: (res) => finishResolve(res.event),
+      error: (err) => {
+        this.resolveLoading.set(false);
+        this.resolveError.set(err?.error?.error ?? 'Impossible d’enregistrer la photo après.');
+      },
+    });
   }
 
   onMapStatusChange(payload: { event: EventRecord; status: EventStatus }) {
+    if (payload.status === 'RESOLU') {
+      this.openResolveModal(payload.event);
+      return;
+    }
     const notes: Partial<Record<EventStatus, string>> = {
       CONFIRME: 'Validé depuis la carte',
       FAUX_POSITIF: 'Rejeté depuis la carte',
       EN_COURS: 'Intervention planifiée (carte)',
-      RESOLU: 'Résolu depuis la carte',
     };
     this.updateEventStatus(payload.event, payload.status, notes[payload.status]);
   }
@@ -819,6 +1111,134 @@ export class App implements OnDestroy {
   }
 
   private initAfterLogin() {
+    this.loadDashboardStats();
+    this.refreshEvents(false);
+    this.startAccueilStory();
+    const later = () => this.loadSecondaryData();
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(later, { timeout: 2500 });
+    } else {
+      setTimeout(later, 1200);
+    }
+  }
+
+  accueilScene() {
+    return this.accueilScenes[this.accueilSceneIndex()];
+  }
+
+  accueilResolutionRate() {
+    const total = this.dashboardTotal();
+    const open = this.dashboardAlerts();
+    if (total <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round(((total - open) / total) * 1000) / 10));
+  }
+
+  // ---- Statistiques détaillées (page d'accueil) ----
+
+  severityBreakdownAccueil() {
+    return severityBreakdown(this.events());
+  }
+
+  statusBreakdownAccueil() {
+    return statusBreakdown(this.events());
+  }
+
+  sizeBreakdownAccueil() {
+    return sizeBreakdown(this.events());
+  }
+
+  depthBreakdownAccueil() {
+    return depthBreakdown(this.events());
+  }
+
+  topCities() {
+    return topByCount(this.events().map((e) => e.city), 5);
+  }
+
+  topMaterials() {
+    const names = this.events().flatMap((e) => (e.repair_materials ?? []).map((m) => m.name));
+    return topByCount(names, 5);
+  }
+
+  sourceBreakdownAccueil() {
+    return sourceBreakdown(this.events());
+  }
+
+  totalBudgetMidTnd() {
+    return totalBudgetMidTnd(this.events());
+  }
+
+  totalBudgetRangeLabel() {
+    return totalBudgetRangeLabel(this.events());
+  }
+
+  averageConfidencePct() {
+    return averageConfidencePct(this.events());
+  }
+
+  averageResolutionDays() {
+    return averageResolutionDays(this.events());
+  }
+
+  citiesCoveredCount() {
+    return citiesCoveredCount(this.events());
+  }
+
+  potholeCountTotal() {
+    return potholeCountTotal(this.events());
+  }
+
+  signsDamageCountTotal() {
+    return signsDamageCountTotal(this.events());
+  }
+
+  selectAccueilScene(index: number) {
+    this.accueilSceneIndex.set(index);
+    this.startAccueilStory();
+    this.playAccueilVideos();
+  }
+
+  openAccueilScene(scene: AccueilScene) {
+    const needsAnalyze = scene.target === 'live' || scene.target === 'video' || scene.target === 'detection';
+    this.setSection(needsAnalyze && !this.canAnalyze() ? 'map' : scene.target);
+  }
+
+  private startAccueilStory() {
+    this.stopAccueilStory();
+    this.playAccueilVideos();
+    this.accueilStoryTimer = setInterval(() => {
+      this.accueilSceneIndex.update((i) => (i + 1) % this.accueilScenes.length);
+    }, 8000);
+  }
+
+  private stopAccueilStory() {
+    if (this.accueilStoryTimer != null) {
+      clearInterval(this.accueilStoryTimer);
+      this.accueilStoryTimer = null;
+    }
+  }
+
+  private playAccueilVideos() {
+    queueMicrotask(() => {
+      for (const ref of this.accueilStoryVideos()) {
+        const video = ref.nativeElement;
+        video.muted = true;
+        void video.play().catch(() => {});
+      }
+    });
+  }
+
+  private loadDashboardStats() {
+    this.api.dashboardStats().subscribe({
+      next: (s) => {
+        this.dashboardTotal.set(s.total ?? 0);
+        this.dashboardAlerts.set(s.alerts ?? 0);
+      },
+      error: () => {},
+    });
+  }
+
+  private loadSecondaryData() {
     this.api.listModels().subscribe({
       next: (res) => {
         if (res.models?.length) {
@@ -833,7 +1253,6 @@ export class App implements OnDestroy {
       },
       error: () => {},
     });
-    this.refreshEvents(false);
     this.api.getMaterialsStatus().subscribe({
       next: (s) => this.geminiConfigured.set(!!s.gemini_configured),
       error: () => this.geminiConfigured.set(false),
@@ -879,12 +1298,38 @@ export class App implements OnDestroy {
 
   onPhotoDragOver(e: DragEvent) {
     e.preventDefault();
+    this.photoDragOver.set(true);
+  }
+
+  onPhotoDragLeave(e: DragEvent) {
+    e.preventDefault();
+    const current = e.currentTarget as HTMLElement;
+    const related = e.relatedTarget as Node | null;
+    if (related && current.contains(related)) return;
+    this.photoDragOver.set(false);
   }
 
   onPhotoDrop(e: DragEvent) {
     e.preventDefault();
+    this.photoDragOver.set(false);
     const f = e.dataTransfer?.files?.[0] ?? null;
     this.applyPhotoFile(f);
+  }
+
+  photoFileSizeLabel() {
+    const f = this.file();
+    if (!f) return '';
+    if (f.size < 1024) return `${f.size} o`;
+    if (f.size < 1024 * 1024) return `${Math.round(f.size / 1024)} Ko`;
+    return `${(f.size / (1024 * 1024)).toFixed(1)} Mo`;
+  }
+
+  videoFileSizeLabel() {
+    const f = this.videoFile();
+    if (!f) return '';
+    if (f.size < 1024) return `${f.size} o`;
+    if (f.size < 1024 * 1024) return `${Math.round(f.size / 1024)} Ko`;
+    return `${(f.size / (1024 * 1024)).toFixed(1)} Mo`;
   }
 
   loadUsers() {
@@ -949,6 +1394,90 @@ export class App implements OnDestroy {
       next: () => this.loadUsers(),
       error: (err) => this.usersError.set(err?.error?.error ?? 'Impossible de supprimer ce compte.'),
     });
+  }
+
+  // --- Suivi d'activité (Superadmin/Admin) ---
+
+  loadUserActivity() {
+    this.activityLoading.set(true);
+    this.activityError.set('');
+    this.api.getUserActivity().subscribe({
+      next: (res) => {
+        this.activityUsers.set(res.users ?? []);
+        this.activityLoading.set(false);
+      },
+      error: (err) => {
+        this.activityError.set(err?.error?.error ?? 'Impossible de charger le suivi d’activité.');
+        this.activityLoading.set(false);
+      },
+    });
+  }
+
+  private startActivityRefresh() {
+    this.loadUserActivity();
+    this.stopActivityRefresh();
+    this.activityRefreshTimer = setInterval(() => this.loadUserActivity(), 20_000);
+  }
+
+  private stopActivityRefresh() {
+    if (this.activityRefreshTimer != null) {
+      clearInterval(this.activityRefreshTimer);
+      this.activityRefreshTimer = null;
+    }
+    this.expandedActivityUserId.set(null);
+  }
+
+  toggleActivityHistory(userId: string) {
+    if (this.expandedActivityUserId() === userId) {
+      this.expandedActivityUserId.set(null);
+      this.activitySessions.set([]);
+      return;
+    }
+    this.expandedActivityUserId.set(userId);
+    this.activitySessions.set([]);
+    this.activitySessionsPage.set(0);
+    this.loadActivitySessions(userId, 0);
+  }
+
+  loadActivitySessions(userId: string, page: number) {
+    this.activitySessionsLoading.set(true);
+    this.api.getUserSessions(userId, page, 10).subscribe({
+      next: (res) => {
+        this.activitySessions.update((prev) => (page === 0 ? res.sessions : [...prev, ...res.sessions]));
+        this.activitySessionsPage.set(res.page);
+        this.activitySessionsTotalPages.set(res.totalPages);
+        this.activitySessionsLoading.set(false);
+      },
+      error: (err) => {
+        this.activityError.set(err?.error?.error ?? 'Impossible de charger l’historique de connexion.');
+        this.activitySessionsLoading.set(false);
+      },
+    });
+  }
+
+  loadMoreActivitySessions(userId: string) {
+    this.loadActivitySessions(userId, this.activitySessionsPage() + 1);
+  }
+
+  hasMoreActivitySessions() {
+    return this.activitySessionsPage() + 1 < this.activitySessionsTotalPages();
+  }
+
+  /** Formate une durée en millisecondes en « 2 h 15 » / « 8 min » lisible (suivi d'activité). */
+  formatActivityDuration(ms?: number | null): string {
+    if (ms == null || !Number.isFinite(ms) || ms < 0) return '—';
+    const totalMinutes = Math.round(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) return `${minutes} min`;
+    if (minutes === 0) return `${hours} h`;
+    return `${hours} h ${minutes}`;
+  }
+
+  sessionEndLabel(reason?: string | null): string {
+    if (reason === 'logout') return 'Déconnexion';
+    if (reason === 'timeout') return 'Session expirée';
+    return '—';
   }
 
   parseNumber(v: unknown) {
@@ -1137,6 +1666,27 @@ export class App implements OnDestroy {
       width: `${(b.x2 - b.x1) * 100}%`,
       height: `${(b.y2 - b.y1) * 100}%`,
     };
+  }
+
+  openResultMap() {
+    const ev = this.result()?.event;
+    if (ev) {
+      this.openMaps(ev);
+      return;
+    }
+    const d = this.detections()[0];
+    if (d) {
+      this.openMapsFromDetection(d);
+      return;
+    }
+    this.openMaps({
+      id: '',
+      ts_ms: 0,
+      label: this.result()?.label ?? '',
+      prob: this.result()?.prob ?? 0,
+      lat: this.lat(),
+      lon: this.lon(),
+    });
   }
 
   openMapsFromDetection(d: SignDetection) {
@@ -1439,27 +1989,71 @@ export class App implements OnDestroy {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      const stream = await this.openCameraStream();
       this.liveStream = stream;
-      const video = this.liveVideo()?.nativeElement;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-      }
       this.liveActive.set(true);
+      const video = this.liveVideo()?.nativeElement;
+      if (!video) {
+        this.stopLiveCamera();
+        this.liveError.set('La vue caméra n’est pas prête. Réessayez.');
+        return;
+      }
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      try {
+        await video.play();
+      } catch {
+        // Flux déjà branché : certains navigateurs rejettent play() alors que l’image s’affiche.
+      }
       this.liveDetections.set([]);
       this.liveAlerts.set([]);
       this.liveFramesAnalyzed.set(0);
       this.liveLastResult.set(null);
+      this.liveLastPothole.set(null);
+      this.liveLastSigns.set(null);
       this.startLiveLoop();
       setTimeout(() => this.captureLiveFrame(), 800);
     } catch (err) {
-      this.liveError.set('Accès à la caméra refusé. Autorisez-le dans le navigateur, puis réessayez.');
-      this.liveActive.set(false);
+      this.stopLiveCamera();
+      this.liveError.set(this.cameraErrorMessage(err));
     }
+  }
+
+  private async openCameraStream(): Promise<MediaStream> {
+    const attempts: MediaStreamConstraints[] = [
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: true, audio: false },
+    ];
+    let lastErr: unknown;
+    for (const constraints of attempts) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        lastErr = err;
+        const name = err instanceof DOMException ? err.name : '';
+        if (name === 'NotAllowedError' || name === 'SecurityError') throw err;
+      }
+    }
+    throw lastErr;
+  }
+
+  private cameraErrorMessage(err: unknown): string {
+    const name = err instanceof DOMException ? err.name : '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return 'Accès à la caméra refusé. Autorisez-le dans le navigateur, puis réessayez.';
+    }
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+      return 'Aucune caméra utilisable n’a été trouvée sur cet appareil.';
+    }
+    if (name === 'NotReadableError') {
+      return 'La caméra est déjà utilisée par une autre application. Fermez-la, puis réessayez.';
+    }
+    if (name === 'AbortError') {
+      return 'L’ouverture de la caméra a été interrompue. Réessayez.';
+    }
+    return 'Impossible d’ouvrir la caméra. Réessayez, ou rechargez la page.';
   }
 
   stopLiveCamera() {
@@ -1523,7 +2117,7 @@ export class App implements OnDestroy {
     this.liveAnalyzing.set(true);
     this.liveError.set('');
     const models = this.liveModelsToRun();
-    this.runLiveModels(file, models, 0, [], null);
+    this.runLiveModels(file, models, 0, []);
   }
 
   private liveModelsToRun(): string[] {
@@ -1537,11 +2131,9 @@ export class App implements OnDestroy {
     models: string[],
     index: number,
     allDets: SignDetection[],
-    lastAlert: PredictResponse | null,
   ) {
     if (index >= models.length || !this.liveActive()) {
       this.liveDetections.set(allDets);
-      if (lastAlert) this.liveLastResult.set(lastAlert);
       this.liveFramesAnalyzed.update((n) => n + 1);
       this.liveAnalyzing.set(false);
       this.liveCaptureInFlight = false;
@@ -1561,18 +2153,18 @@ export class App implements OnDestroy {
       })
       .subscribe({
         next: (res) => {
+          if (model === 'pothole') this.liveLastPothole.set(res);
+          if (model === 'signs_damage') this.liveLastSigns.set(res);
+          if (this.isLiveProblem(res, model)) this.liveLastResult.set(res);
           const dets = this.extractDetections(res, model);
           const merged = [...allDets, ...dets];
-          const newEv = res.events?.length ? res.events : res.event ? [res.event] : [];
-          if (newEv.length) {
-            this.liveAlerts.update((list) => [...newEv, ...list].slice(0, 50));
-            this.events.update((list) => [...newEv, ...list].slice(0, 200));
+          const incoming = res.events?.length ? res.events : res.event ? [res.event] : [];
+          const problems = incoming.filter((e) => !!e.alert && !isClearFinding(e));
+          if (problems.length) {
+            this.liveAlerts.update((list) => [...problems, ...list].slice(0, 50));
+            this.events.update((list) => [...problems, ...list].slice(0, 200));
           }
-          const isAlert =
-            !!res.event?.alert ||
-            (res.detection_count ?? 0) > 0 ||
-            (model === 'pothole' && res.label === 'potholes');
-          this.runLiveModels(file, models, index + 1, merged, isAlert ? res : lastAlert);
+          this.runLiveModels(file, models, index + 1, merged);
         },
         error: (err) => {
           this.liveError.set(this.formatApiError(err));
@@ -1580,6 +2172,33 @@ export class App implements OnDestroy {
           this.liveCaptureInFlight = false;
         },
       });
+  }
+
+  private isLiveProblem(res: PredictResponse, model: string): boolean {
+    if (model === 'signs_damage') {
+      return (res.detection_count ?? 0) > 0 || !!res.event?.alert;
+    }
+    return !!res.event?.alert || (res.label === 'potholes' && (res.prob ?? 0) >= this.threshold());
+  }
+
+  protected liveChecksPothole(): boolean {
+    const m = this.liveModel();
+    return m === 'both' || m === 'pothole';
+  }
+
+  protected liveChecksSigns(): boolean {
+    const m = this.liveModel();
+    return m === 'both' || m === 'signs_damage';
+  }
+
+  protected livePotholeHit(): boolean {
+    const res = this.liveLastPothole();
+    return !!res && this.isLiveProblem(res, 'pothole');
+  }
+
+  protected liveSignsHit(): boolean {
+    const res = this.liveLastSigns();
+    return !!res && this.isLiveProblem(res, 'signs_damage');
   }
 
   private extractDetections(res: PredictResponse, model: string): SignDetection[] {
@@ -1592,10 +2211,10 @@ export class App implements OnDestroy {
   }
 
   livePotholeAlerts() {
-    return this.liveAlerts().filter((e) => e.model === 'pothole' || !e.model);
+    return this.liveAlerts().filter((e) => (e.model === 'pothole' || !e.model) && !!e.alert && !isClearFinding(e));
   }
 
   liveSignsAlerts() {
-    return this.liveAlerts().filter((e) => e.model === 'signs_damage');
+    return this.liveAlerts().filter((e) => e.model === 'signs_damage' && !!e.alert && !isClearFinding(e));
   }
 }

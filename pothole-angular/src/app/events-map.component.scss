@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 .events-map {
   display: flex;
   flex-direction: column;
@@ -176,6 +178,13 @@
 .detail-label {
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.metric-sub-inline {
+  margin-left: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 .ocr-text {

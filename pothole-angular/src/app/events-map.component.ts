@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   OnDestroy,
+  ViewEncapsulation,
   effect,
   inject,
   input,
@@ -24,6 +25,7 @@ import {
   statusLabel,
 } from './event-workflow.util';
 import {
+  depthClassCss,
   depthProxyLabel,
   formatSizeCm,
   isPotholeEvent,
@@ -59,6 +61,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
   imports: [CommonModule],
   templateUrl: './events-map.component.html',
   styleUrl: './events-map.component.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class EventsMapComponent implements AfterViewInit, OnDestroy {
   private readonly http = inject(HttpClient);
@@ -85,6 +88,7 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
   protected readonly confidencePct = confidencePct;
   protected readonly modelLabel = modelLabel;
   protected readonly sizeClassCss = sizeClassCss;
+  protected readonly depthClassCss = depthClassCss;
   protected readonly formatSizeCm = formatSizeCm;
   protected readonly isPotholeEvent = isPotholeEvent;
   protected readonly depthProxyLabel = depthProxyLabel;
@@ -93,6 +97,7 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
 
   selected = signal<MapPoint | null>(null);
   selectedFrameUrl = signal<string | null>(null);
+  selectedAfterUrl = signal<string | null>(null);
   showHeatmap = signal(true);
   showMarkers = signal(true);
   filterModel = signal<'all' | 'pothole' | 'signs_damage'>('all');
@@ -102,6 +107,7 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
   private markerLayer?: L.LayerGroup;
   private heatLayer?: L.Layer;
   private frameObjectUrl: string | null = null;
+  private afterObjectUrl: string | null = null;
   private mapReady = false;
 
   readonly stats = signal({ total: 0, onMap: 0, alerts: 0, approximate: 0 });
@@ -119,7 +125,9 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
       if (sel) {
         const updated = _events.find((e) => e.id === sel.event.id);
         if (updated && updated !== sel.event) {
+          const needAfter = !!updated.has_after_photo && !sel.event.has_after_photo;
           this.selected.set({ ...sel, event: updated });
+          if (needAfter) this.loadAfterFrame(updated);
         }
       }
 
@@ -156,6 +164,7 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.revokeFrameUrl();
+    this.revokeAfterUrl();
     this.map?.remove();
   }
 
@@ -177,12 +186,14 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
   selectPoint(point: MapPoint): void {
     this.selected.set(point);
     this.loadFrame(point.event);
+    this.loadAfterFrame(point.event);
     this.map?.panTo([point.lat, point.lon]);
   }
 
   clearSelection(): void {
     this.selected.set(null);
     this.revokeFrameUrl();
+    this.revokeAfterUrl();
   }
 
   openGoogleMaps(point: MapPoint): void {
@@ -234,6 +245,26 @@ export class EventsMapComponent implements AfterViewInit, OnDestroy {
       this.frameObjectUrl = null;
     }
     this.selectedFrameUrl.set(null);
+  }
+
+  private loadAfterFrame(event: EventRecord): void {
+    this.revokeAfterUrl();
+    if (!event.has_after_photo) return;
+    this.http.get(`/api/events/${event.id}/after-frame`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        this.afterObjectUrl = URL.createObjectURL(blob);
+        this.selectedAfterUrl.set(this.afterObjectUrl);
+      },
+      error: () => this.selectedAfterUrl.set(null),
+    });
+  }
+
+  private revokeAfterUrl(): void {
+    if (this.afterObjectUrl) {
+      URL.revokeObjectURL(this.afterObjectUrl);
+      this.afterObjectUrl = null;
+    }
+    this.selectedAfterUrl.set(null);
   }
 
   private resolvePoints(): MapPoint[] {

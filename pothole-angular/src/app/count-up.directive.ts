@@ -1,11 +1,10 @@
 import { Directive, ElementRef, inject, input, effect } from '@angular/core';
 
 /**
- * Animates a numeric value from its previous state up (or down) to the new
- * target whenever it changes, easing out over ~900ms. Falls back to an
- * instant update when the user has requested reduced motion.
- *
- * Usage: <h3 [countUp]="events().length"></h3>
+ * Anime un nombre affiché : part de la valeur précédemment affichée (0 au
+ * premier rendu) et progresse vers la nouvelle valeur avec un easing
+ * "ease-out", au lieu de basculer instantanément (ancien comportement).
+ * Respecte prefers-reduced-motion et formate en fr-FR (séparateur de milliers).
  */
 @Directive({
   selector: '[countUp]',
@@ -14,52 +13,70 @@ export class CountUpDirective {
   private readonly el = inject(ElementRef<HTMLElement>).nativeElement;
 
   readonly countUp = input<number>(0);
+  /** Nombre de décimales à afficher (0 = entier, ex: compteurs). */
+  readonly countUpDecimals = input<number>(0);
+  /** Durée de l'animation en ms. */
+  readonly countUpDuration = input<number>(900);
 
-  private current = 0;
-  private frame: number | null = null;
-  private started = false;
+  private displayed = 0;
+  private rafId: number | null = null;
+
+  private readonly reducedMotion =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false;
 
   constructor() {
     effect(() => {
-      const target = Math.round(this.countUp() ?? 0);
-      if (!this.started) {
-        // First paint: count up from 0 instead of jumping straight to value.
-        this.started = true;
-        this.current = 0;
-        this.el.textContent = '0';
-      }
-      this.animateTo(target);
+      const target = Number(this.countUp() ?? 0);
+      const decimals = this.countUpDecimals();
+      this.animateTo(Number.isFinite(target) ? target : 0, decimals);
     });
   }
 
-  private animateTo(target: number) {
-    const reduceMotion =
-      typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      this.current = target;
-      this.el.textContent = String(target);
+  private animateTo(target: number, decimals: number) {
+    if (this.rafId != null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    const start = this.displayed;
+    const delta = target - start;
+    const threshold = decimals > 0 ? 0.05 : 1;
+
+    if (this.reducedMotion || Math.abs(delta) < threshold) {
+      this.displayed = target;
+      this.render(target, decimals);
       return;
     }
 
-    if (this.frame != null) cancelAnimationFrame(this.frame);
-    const start = this.current;
-    const delta = target - start;
-    if (delta === 0) return;
-    const duration = 900;
-    const startTime = performance.now();
+    const duration = Math.max(1, this.countUpDuration());
+    const startTime = Date.now();
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-    const step = (now: number) => {
-      const t = Math.min(1, (now - startTime) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const value = Math.round(start + delta * eased);
-      this.el.textContent = String(value);
-      if (t < 1) {
-        this.frame = requestAnimationFrame(step);
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const value = start + delta * easeOutCubic(progress);
+      this.displayed = value;
+      this.render(value, decimals);
+      if (progress < 1) {
+        this.rafId = requestAnimationFrame(step);
       } else {
-        this.current = target;
-        this.frame = null;
+        this.displayed = target;
+        this.render(target, decimals);
+        this.rafId = null;
       }
     };
-    this.frame = requestAnimationFrame(step);
+
+    this.rafId = requestAnimationFrame(step);
+  }
+
+  private render(value: number, decimals: number) {
+    const rounded = decimals > 0 ? Number(value.toFixed(decimals)) : Math.round(value);
+    this.el.textContent = rounded.toLocaleString('fr-FR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
   }
 }

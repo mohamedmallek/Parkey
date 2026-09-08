@@ -5,6 +5,38 @@ import type { UserInfo } from './auth.service';
 import type { EventSeverity, EventStatus } from './event-workflow.util';
 import type { RepairAnalysis, RepairMaterial } from './materials.util';
 
+/** Ligne du tableau de suivi d'activité (Superadmin/Admin). */
+export type UserActivity = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: 'SUPERADMIN' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  enabled: boolean;
+  online: boolean;
+  lastLoginAtMs?: number | null;
+  lastSeenAtMs?: number | null;
+  todayActiveMs: number;
+  sessionsCount: number;
+};
+
+/** Une session de connexion passée (ou en cours) d'un utilisateur. */
+export type UserSessionEntry = {
+  id: string;
+  loginAtMs: number;
+  logoutAtMs?: number | null;
+  ongoing: boolean;
+  durationMs: number;
+  endReason?: string | null;
+};
+
+export type UserSessionsPage = {
+  user: UserActivity;
+  sessions: UserSessionEntry[];
+  page: number;
+  totalPages: number;
+  totalElements: number;
+};
+
 export type StatusHistoryEntry = {
   ts_ms: number;
   from_status?: string | null;
@@ -103,6 +135,12 @@ export type EventRecord = {
   depth_proxy?: string | null;
   depth_score?: number | null;
   size_calibration?: Record<string, unknown> | null;
+  budget_min_tnd?: number | null;
+  budget_max_tnd?: number | null;
+  budget_mid_tnd?: number | null;
+  budget_currency?: string | null;
+  budget_method?: string | null;
+  budget_note?: string | null;
   repair_materials?: RepairMaterial[] | null;
   repair_steps?: string[] | null;
   repair_note?: string | null;
@@ -115,6 +153,15 @@ export type EventRecord = {
     estimated_depth?: string;
   } | null;
   repair_materials_warning?: string | null;
+  after_frame_path?: string | null;
+  after_ts_ms?: number | null;
+  has_after_photo?: boolean | null;
+  assigned_user_id?: string | null;
+  assigned_user_name?: string | null;
+  assigned_at_ms?: number | null;
+  confirmed_at_ms?: number | null;
+  sla_due_ms?: number | null;
+  sla_overdue?: boolean | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -151,6 +198,10 @@ export class ApiService {
     return this.http.post<PredictResponse>('/api/predict', form);
   }
 
+  dashboardStats() {
+    return this.http.get<{ total: number; alerts: number }>('/api/events/stats');
+  }
+
   listEvents(
     limit = 200,
     filters?: { status?: string; city?: string; severity?: string },
@@ -164,6 +215,10 @@ export class ApiService {
 
   updateEventStatus(id: string, status: EventStatus, note?: string) {
     return this.http.patch<{ event: EventRecord }>(`/api/events/${id}/status`, { status, note });
+  }
+
+  assignEvent(id: string, userId: string | null) {
+    return this.http.post<{ event: EventRecord }>(`/api/events/${id}/assign`, { userId });
   }
 
   exportJson() {
@@ -225,6 +280,16 @@ export class ApiService {
     return this.http.get(`/api/events/frame/${eventId}`, { responseType: 'blob' as const });
   }
 
+  getAfterFrame(eventId: string) {
+    return this.http.get(`/api/events/${eventId}/after-frame`, { responseType: 'blob' as const });
+  }
+
+  uploadAfterPhoto(eventId: string, file: File) {
+    const form = new FormData();
+    form.append('image', file);
+    return this.http.post<{ event: EventRecord }>(`/api/events/${eventId}/after-photo`, form);
+  }
+
   deleteEvent(eventId: string) {
     return this.http.delete(`/api/events/${eventId}`);
   }
@@ -266,5 +331,14 @@ export class ApiService {
       '/api/materials/analyze',
       form,
     );
+  }
+
+  getUserActivity() {
+    return this.http.get<{ users: UserActivity[] }>('/api/admin/user-activity');
+  }
+
+  getUserSessions(userId: string, page: number, size: number) {
+    const params = new HttpParams().set('page', page).set('size', size);
+    return this.http.get<UserSessionsPage>(`/api/admin/user-activity/${userId}/sessions`, { params });
   }
 }

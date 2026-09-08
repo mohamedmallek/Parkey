@@ -1,5 +1,6 @@
 package com.onsr.pothole.controller;
 
+import com.onsr.pothole.dto.AssignEventRequest;
 import com.onsr.pothole.dto.UpdateEventStatusRequest;
 import com.onsr.pothole.security.UserPrincipal;
 import com.onsr.pothole.service.EventService;
@@ -10,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -23,6 +25,11 @@ public class EventController {
     public EventController(EventService eventService, MlProxyService mlProxyService) {
         this.eventService = eventService;
         this.mlProxyService = mlProxyService;
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Long>> stats() {
+        return ResponseEntity.ok(eventService.stats());
     }
 
     @GetMapping
@@ -70,6 +77,31 @@ public class EventController {
                 principal.getRole().name(),
                 body.getNote());
         return ResponseEntity.ok(Map.of("event", event));
+    }
+
+    @PostMapping("/{id}/assign")
+    public ResponseEntity<Map<String, Object>> assign(
+            @PathVariable String id,
+            @RequestBody AssignEventRequest body,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Map<String, Object> event = eventService.assignTo(
+                id, body.getUserId(), principal.getUserId(), principal.getRole());
+        return ResponseEntity.ok(Map.of("event", event));
+    }
+
+    @PostMapping(value = "/{id}/after-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadAfterPhoto(
+            @PathVariable String id,
+            @RequestParam("image") MultipartFile image) {
+        return ResponseEntity.ok(Map.of("event", eventService.saveAfterPhoto(id, image)));
+    }
+
+    @GetMapping("/{id}/after-frame")
+    public ResponseEntity<byte[]> afterFrame(@PathVariable String id) {
+        byte[] data = eventService.afterPhotoBytes(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(data);
     }
 
     @DeleteMapping("/{id}")

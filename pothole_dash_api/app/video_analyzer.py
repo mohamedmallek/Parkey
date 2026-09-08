@@ -12,7 +12,17 @@ from PIL import Image
 
 from app.inference import LoadedModel, predict_bytes
 from app.ocr_coords import parse_lat_lon
-from app.yolo_detection import detect_damaged_signs
+from app.yolo_detection import SIGNS_MIN_CONF, detect_damaged_signs
+
+_ocr_reader = None
+
+
+def _get_ocr_reader():
+    """Charge EasyOCR une seule fois (très lent au premier appel CPU)."""
+    global _ocr_reader
+    if _ocr_reader is None:
+        _ocr_reader = easyocr.Reader(["en"], gpu=False)
+    return _ocr_reader
 
 
 @dataclass(frozen=True)
@@ -103,13 +113,10 @@ def analyze_video_file(
 
     fps, _total, step, _dur, _est = _video_sampling(cap, sample_fps, max_frames)
 
-    reader = None
-    if ocr_enabled:
-        reader = easyocr.Reader(["en"], gpu=False)
-
     findings: List[VideoFinding] = []
     frame_idx = -1
     analyzed = 0
+    reader = None
     while True:
         ok, frame = cap.read()
         if not ok:
@@ -129,6 +136,8 @@ def analyze_video_file(
         frame_path = (out / f"{finding_id}.jpg").as_posix()
         Path(frame_path).write_bytes(jpg_bytes)
 
+        if ocr_enabled and reader is None:
+            reader = _get_ocr_reader()
         ocr_text, lat, lon = _ocr_coords(reader, frame)
 
         ts_ms = int(round((frame_idx / fps) * 1000))
@@ -185,12 +194,9 @@ def analyze_video_signs_yolo(
 
     fps, _total, step, _dur, _est = _video_sampling(cap, sample_fps, max_frames)
 
-    reader = None
-    if ocr_enabled:
-        reader = easyocr.Reader(["en"], gpu=False)
-
     findings: List[VideoFinding] = []
     frame_idx = -1
+    reader = None
     while True:
         ok, frame = cap.read()
         if not ok:
@@ -201,7 +207,7 @@ def analyze_video_signs_yolo(
 
         jpg_bytes = _encode_jpg_bgr(frame)
         try:
-            hits, _w, _h = detect_damaged_signs(model_path, jpg_bytes)
+            hits, _w, _h = detect_damaged_signs(model_path, jpg_bytes, min_conf=max(SIGNS_MIN_CONF, float(threshold)))
         except Exception:
             continue
         if not hits:
@@ -214,6 +220,8 @@ def analyze_video_signs_yolo(
         Path(frame_path).write_bytes(jpg_out)
 
         best = max(hits, key=lambda x: float(x["conf"]))
+        if ocr_enabled and reader is None:
+            reader = _get_ocr_reader()
         ocr_text, lat, lon = _ocr_coords(reader, frame)
 
         ts_ms = int(round((frame_idx / fps) * 1000))
@@ -262,13 +270,10 @@ def analyze_video_combined(
 
     fps, total, step, duration_sec, est_samples = _video_sampling(cap, sample_fps, max_frames)
 
-    reader = None
-    if ocr_enabled:
-        reader = easyocr.Reader(["en"], gpu=False)
-
     findings: List[VideoFinding] = []
     frame_idx = -1
     analyzed = 0
+    reader = None
 
     while True:
         ok, frame = cap.read()
@@ -288,6 +293,8 @@ def analyze_video_combined(
                 finding_id = str(uuid.uuid4())
                 frame_path = (out / f"{finding_id}.jpg").as_posix()
                 Path(frame_path).write_bytes(jpg_bytes)
+                if ocr_enabled and reader is None:
+                    reader = _get_ocr_reader()
                 ocr_text, lat, lon = _ocr_coords(reader, frame)
                 findings.append(
                     VideoFinding(
@@ -307,7 +314,9 @@ def analyze_video_combined(
 
         if signs_model_path and os.path.exists(signs_model_path):
             try:
-                hits, _w, _h = detect_damaged_signs(signs_model_path, jpg_bytes)
+                hits, _w, _h = detect_damaged_signs(
+                    signs_model_path, jpg_bytes, min_conf=max(SIGNS_MIN_CONF, float(signs_threshold))
+                )
             except Exception:
                 hits = []
             if hits:
@@ -317,6 +326,8 @@ def analyze_video_combined(
                 frame_path = (out / f"{finding_id}.jpg").as_posix()
                 Path(frame_path).write_bytes(jpg_out)
                 best = max(hits, key=lambda x: float(x["conf"]))
+                if ocr_enabled and reader is None:
+                    reader = _get_ocr_reader()
                 ocr_text, lat, lon = _ocr_coords(reader, frame)
                 findings.append(
                     VideoFinding(

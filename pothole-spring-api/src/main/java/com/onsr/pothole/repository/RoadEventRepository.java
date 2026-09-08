@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface RoadEventRepository extends MongoRepository<RoadEvent, String> {
     List<RoadEvent> findAllByOrderByTsMsDesc(Pageable pageable);
+    long countByAlertTrue();
 }

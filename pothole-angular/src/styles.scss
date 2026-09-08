@@ -1,7 +1,26 @@
-@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/tables';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/nav';
+@import 'bootstrap/scss/card';
+@import 'bootstrap/scss/badge';
+@import 'bootstrap/scss/alert';
+@import 'bootstrap/scss/close';
+@import 'bootstrap/scss/helpers';
+@import 'bootstrap/scss/utilities/api';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 @import './steex-layout.scss';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 :root {
   --bg: #f4f6f8;
@@ -12,8 +31,8 @@
   --border: #e2e6eb;
   --border-strong: #cfd6de;
   --text: #1a2332;
-  --text-secondary: #5b6573;
-  --text-muted: #7a8491;
+  --text-secondary: #3d4754;
+  --text-muted: #3d4754;
   --primary: #2dbee6;
   --primary-hover: #1aa9d1;
   --primary-ink: #111111;
@@ -30,9 +49,9 @@
   --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.1);
   --radius: 12px;
   --radius-lg: 16px;
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
   --gold: #fde900;
   --gold-dim: #e6d200;
   --navy: #2dbee6;
@@ -112,6 +131,33 @@ code {
 .form-label,
 .text-muted {
   color: var(--text-secondary) !important;
+}
+
+.text-primary,
+.text-info {
+  color: #0a6e86 !important;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 2000;
+  padding: 8px 12px;
+  background: #111;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+:focus-visible {
+  outline: 3px solid #0a6e86;
+  outline-offset: 2px;
 }
 
 .form-control,

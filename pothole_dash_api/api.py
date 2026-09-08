@@ -32,7 +32,7 @@ from app.video_analyzer import (
     analyze_video_file,
     analyze_video_signs_yolo,
 )
-from app.yolo_detection import detect_damaged_signs
+from app.yolo_detection import SIGNS_MIN_CONF, detect_damaged_signs
 from app.pothole_sizing import enrich_pothole_event
 from app.repair_materials import analyze_repair_materials, enrich_event_repair_materials
 
@@ -78,6 +78,21 @@ def _save_event_frame(event_id: str, img_bytes: bytes) -> str:
     frame_path = (out / f"{event_id}.jpg").as_posix()
     Path(frame_path).write_bytes(img_bytes)
     return frame_path
+
+
+def _should_persist_event(evt: dict, source: str | None) -> bool:
+    if evt.get("alert"):
+        return True
+    return (source or "") != "live-camera"
+
+
+def _persist_predict_event(evt: dict, img_bytes: bytes, meta: dict, model_id: str) -> None:
+    evt["frame_path"] = _save_event_frame(evt["id"], img_bytes)
+    if model_id == "pothole" and evt.get("label") == meta.get("alert_label", "potholes"):
+        enrich_pothole_event(evt, img_bytes)
+    if evt.get("alert") and model_id == "pothole":
+        enrich_event_repair_materials(evt, img_bytes)
+    _append_event(evt)
 
 
 def _append_event(evt: dict):
@@ -196,12 +211,9 @@ def predict():
         "threshold": threshold,
     }
     evt["alert"] = compute_alert(model_id, label, float(prob), threshold)
-    evt["frame_path"] = _save_event_frame(evt["id"], img_bytes)
-    if model_id == "pothole" and label == meta.get("alert_label", "potholes"):
-        enrich_pothole_event(evt, img_bytes)
-    if evt.get("alert") and model_id == "pothole":
-        enrich_event_repair_materials(evt, img_bytes)
-    _append_event(evt)
+    persisted = _should_persist_event(evt, common.get("source"))
+    if persisted:
+        _persist_predict_event(evt, img_bytes, meta, model_id)
 
     resp = {
             "model": model_id,
@@ -211,7 +223,7 @@ def predict():
             "prob": prob,
             "topk": top,
             "classes": loaded.classes,
-            "event": evt,
+            "event": evt if persisted else None,
         }
     if evt.get("size_class") or evt.get("bbox_norm"):
         resp["size_estimate"] = {
@@ -240,7 +252,11 @@ def _predict_signs_damage(model_id, meta, f, img_bytes, common, threshold):
         ), 400
 
     try:
-        raw_dets, img_w, img_h = detect_damaged_signs(path, img_bytes)
+        signs_keep = float(threshold) if float(threshold) < 0.7 else SIGNS_MIN_CONF
+        signs_keep = max(SIGNS_MIN_CONF, signs_keep)
+        if (common.get("source") or "") == "live-camera":
+            signs_keep = max(0.55, signs_keep)
+        raw_dets, img_w, img_h = detect_damaged_signs(path, img_bytes, min_conf=signs_keep)
     except ImportError as e:
         return jsonify({"error": str(e)}), 500
     except Exception as e:
@@ -259,7 +275,8 @@ def _predict_signs_damage(model_id, meta, f, img_bytes, common, threshold):
     detections = []
     events = []
     for d in raw_dets:
-
+        if float(d.get("conf") or 0) < signs_keep:
+            continue
         street = {
             "lat": lat,
             "lon": lon,
@@ -350,7 +367,6 @@ def _findings_to_events(findings, source, threshold, city, zone, fallback_lat, f
             try:
                 img_bytes = Path(f.frame_path).read_bytes()
                 enrich_pothole_event(evt, img_bytes)
-                enrich_event_repair_materials(evt, img_bytes)
             except Exception:
                 pass
         _append_event(evt)

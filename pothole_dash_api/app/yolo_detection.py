@@ -6,14 +6,13 @@ import io
 import os
 from typing import List, Optional, Tuple
 
-import cv2
 import numpy as np
 from PIL import Image
 
 _yolo_cache: dict = {}
 
-YOLO_DETECT_CONF = float(os.environ.get("SIGNS_DETECT_CONF", "0.20"))
-SIGNS_MIN_CONF = float(os.environ.get("SIGNS_MIN_CONF", "0.18"))
+YOLO_DETECT_CONF = float(os.environ.get("SIGNS_DETECT_CONF", "0.35"))
+SIGNS_MIN_CONF = float(os.environ.get("SIGNS_MIN_CONF", "0.45"))
 
 DAMAGED_LABEL_KEYWORDS = (
     "damaged",
@@ -64,8 +63,20 @@ def is_fallen_bbox(bbox_norm: dict) -> bool:
     return False
 
 
+def looks_like_sign_label(label: str) -> bool:
+    n = label.lower().replace("-", "_").replace(" ", "_")
+    if is_damaged_label(n):
+        return True
+    if n in ("sign_ok", "ok", "intact", "normal", "good", "very_good", "verygood", "acceptable"):
+        return True
+    return any(k in n for k in ("sign", "panneau", "traffic", "board"))
+
+
 def looks_damaged(det: dict) -> bool:
-    return is_damaged_label(str(det.get("label") or "")) or is_fallen_bbox(det.get("bbox_norm") or {})
+    label = str(det.get("label") or "")
+    if is_damaged_label(label):
+        return True
+    return looks_like_sign_label(label) and is_fallen_bbox(det.get("bbox_norm") or {})
 
 
 def get_yolo(model_path: str):
@@ -134,66 +145,13 @@ def detect_bytes(
     return detections, w, h
 
 
-def _red_mask(bgr: np.ndarray) -> np.ndarray:
-    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-    red = cv2.bitwise_or(
-        cv2.inRange(hsv, (0, 70, 50), (12, 255, 255)),
-        cv2.inRange(hsv, (168, 70, 50), (180, 255, 255)),
-    )
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    red = cv2.morphologyEx(red, cv2.MORPH_CLOSE, kernel, iterations=2)
-    red = cv2.morphologyEx(red, cv2.MORPH_OPEN, kernel, iterations=1)
-    return red
-
-
-def _detect_red_sign_heuristic(bgr: np.ndarray) -> Optional[dict]:
-    """Repère un panneau rouge (triangle / rond) surtout s’il est à terre."""
-    h, w = bgr.shape[:2]
-    if h < 24 or w < 24:
-        return None
-    red = _red_mask(bgr)
-    contours, _ = cv2.findContours(red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    img_area = float(h * w)
-    best = None
-    best_score = 0.0
-    for cnt in contours:
-        area = float(cv2.contourArea(cnt))
-        if area < img_area * 0.006 or area > img_area * 0.45:
-            continue
-        x, y, bw, bh = cv2.boundingRect(cnt)
-        if bw < 12 or bh < 12:
-            continue
-        peri = cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, 0.06 * peri, True)
-        circularity = 4 * np.pi * area / max(peri * peri, 1.0)
-        aspect = bw / max(bh, 1)
-        cy = (y + bh / 2.0) / h
-        triangle = 3 <= len(approx) <= 4
-        disk = circularity >= 0.55
-        if not triangle and not disk and not (aspect >= 1.3 and cy >= 0.4):
-            continue
-        fallen = aspect >= 1.28 and cy >= 0.38
-        if not fallen and not triangle and not disk:
-            continue
-        # Un panneau droit et « propre » n’est pas une alerte heuristique.
-        if not fallen and circularity > 0.72 and cy < 0.45:
-            continue
-        inset = min((x + bw / 2) / w, cy, 1 - (x + bw / 2) / w, 1 - cy)
-        score = (area**0.5) * (1.25 if triangle or fallen else 1.0) * (0.5 + inset)
-        if score > best_score:
-            best_score = score
-            label = "fallen_sign" if fallen else "damaged_sign"
-            best = _box_payload(x, y, x + bw, y + bh, w, h, label, 0.62)
-    return best
-
-
 def detect_damaged_signs(
     model_path: str,
     image_bytes: bytes,
     detect_conf: Optional[float] = None,
     min_conf: Optional[float] = None,
 ) -> Tuple[List[dict], int, int]:
-    """YOLO (Poor / Very poor / panneau à terre) puis secours couleur si rien."""
+    """YOLO uniquement : Poor / Very poor / panneau à terre. Pas de secours couleur."""
     conf = YOLO_DETECT_CONF if detect_conf is None else float(detect_conf)
     conf = max(0.05, min(0.6, conf))
     keep = SIGNS_MIN_CONF if min_conf is None else float(min_conf)
@@ -212,13 +170,4 @@ def detect_damaged_signs(
     if damaged:
         damaged.sort(key=lambda d: float(d["conf"]), reverse=True)
         return damaged, w, h
-
-    arr = np.frombuffer(image_bytes, dtype=np.uint8)
-    bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if bgr is None:
-        pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        bgr = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
-    heur = _detect_red_sign_heuristic(bgr)
-    if heur:
-        return [heur], w, h
     return [], w, h

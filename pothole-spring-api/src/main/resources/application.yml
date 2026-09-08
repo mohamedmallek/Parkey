@@ -33,11 +33,17 @@ app:
     allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
   ml:
     base-url: ${ML_SERVICE_URL:http://127.0.0.1:5000}
+    
   mail:
     enabled: ${MAIL_ENABLED:true}
     from: ${MAIL_FROM:${SMTP_USER:noreply@onsr.local}}
-    from-name: ${MAIL_FROM_NAME:ONSR Surveillance routière}
+    from-name: ${MAIL_FROM_NAME:Parkey}
     app-url: ${APP_URL:http://localhost:4200}
+  sla:
+    critical-hours: ${SLA_CRITICAL_HOURS:48}
+    high-hours: ${SLA_HIGH_HOURS:120}
+    medium-hours: ${SLA_MEDIUM_HOURS:360}
+    low-hours: ${SLA_LOW_HOURS:720}
 
 logging:
   level:

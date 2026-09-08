@@ -272,32 +272,34 @@ def _friendly_gemini_error(exc: Exception) -> str:
 
 
 def _build_gemini_prompt(meta: Dict[str, Any]) -> str:
-    return f"""Tu es un ingénieur routier expert en maintenance voirie en TUNISIE (ONSR).
-Analyse la photo de route / nid-de-poule et détermine les MATÉRIAUX nécessaires pour une réparation DURABLE.
+    return f"""Tu es un ingénieur voirie en Tunisie (ONSR).
+Estime les matériaux pour réparer CE nid-de-poule, de façon SIMPLE et COURTE.
 
-IMPORTANT :
-- NE DONNE AUCUN PRIX, AUCUN BUDGET, AUCUN MONTANT EN DINARS (TND).
-- Liste uniquement les matériaux avec quantités estimées.
+Règles :
+- AUCUN prix.
+- 3 à 5 matériaux maximum, uniquement pour la chaussée (enrobé, accrochage, agrégats).
+- Pas de réseaux, conduites, pavés, trottoirs, béton de structure, fontis, ni diagnostic long.
+- Quantités réalistes et arrondies.
+- 3 étapes maximum, chacune en une courte phrase.
+- "note" : une seule phrase, 100 caractères max.
 
-Contexte détection IA :
-- Label : {meta.get('label', 'potholes')}
-- Confiance : {meta.get('prob', '?')}
-- Classe taille : {meta.get('size_class', '?')} ({meta.get('width_cm_est')} × {meta.get('length_cm_est')} cm)
-- Profondeur proxy : {meta.get('depth_proxy', '?')}
+Contexte IA :
+- Taille : {meta.get('size_class', '?')} ({meta.get('width_cm_est')} × {meta.get('length_cm_est')} cm)
+- Profondeur : {meta.get('depth_proxy', '?')}
 - Ville : {meta.get('city', 'Tunis')}
 
 Réponds UNIQUEMENT avec un JSON valide (pas de markdown) :
 {{
   "materials": [
-    {{"name": "nom", "quantity": number, "unit": "kg|L|m³|sacs", "role": "rôle"}}
+    {{"name": "nom court", "quantity": number, "unit": "kg|L|m³"}}
   ],
-  "repair_steps": ["étape 1", "..."],
+  "repair_steps": ["étape 1", "étape 2", "étape 3"],
   "pothole_assessment": {{
     "severity": "faible|modérée|importante|critique",
     "repair_type": "colmatage|refection_partielle|refection_profonde",
-    "estimated_depth": "description courte"
+    "estimated_depth": "court"
   }},
-  "note": "justification courte en français",
+  "note": "une phrase",
   "confidence": "haute|moyenne|faible"
 }}"""
 
@@ -330,20 +332,21 @@ def _call_gemini(image_bytes: bytes, meta: Dict[str, Any]) -> Tuple[Optional[Dic
                 last_err = f"Réponse invalide ({model_name})"
                 continue
 
-            materials = _normalize_materials(parsed.get("materials"))
+            materials = _normalize_materials(parsed.get("materials"))[:5]
             steps = parsed.get("repair_steps") if isinstance(parsed.get("repair_steps"), list) else []
-            steps = [str(s).strip() for s in steps if str(s).strip()]
+            steps = [str(s).strip() for s in steps if str(s).strip()][:3]
             assessment = parsed.get("pothole_assessment")
             if not isinstance(assessment, dict):
                 assessment = {}
+            note = str(parsed.get("note") or "").strip()[:120]
 
             return (
                 {
                     "method": "gemini",
                     "materials": materials,
-                    "repair_steps": steps or list(STANDARD_REPAIR_STEPS),
+                    "repair_steps": steps or list(STANDARD_REPAIR_STEPS)[:3],
                     "pothole_assessment": assessment,
-                    "note": parsed.get("note") or f"Analyse Gemini ({model_name}).",
+                    "note": note or f"Analyse Gemini ({model_name}).",
                     "confidence": parsed.get("confidence"),
                     "disclaimer": GEMINI_DISCLAIMER,
                     "gemini_available": True,

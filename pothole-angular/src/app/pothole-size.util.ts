@@ -16,9 +16,9 @@ const SIZE_SHORT: Record<PotholeSizeClass, string> = {
 };
 
 const DEPTH_LABELS: Record<DepthProxy, string> = {
-  FAIBLE: 'Peu profond',
-  MOYENNE: 'Profondeur moyenne',
-  PROFONDE: 'Assez profond',
+  FAIBLE: 'Faible',
+  MOYENNE: 'Moyenne',
+  PROFONDE: 'Profonde',
 };
 
 export function sizeClassLabel(c?: string | null): string {
@@ -49,6 +49,19 @@ export function sizeClassCss(c?: string | null): string {
 export function depthProxyLabel(d?: string | null): string {
   if (!d) return '—';
   return DEPTH_LABELS[d as DepthProxy] ?? d;
+}
+
+export function depthClassCss(d?: string | null): string {
+  switch (d) {
+    case 'PROFONDE':
+      return 'size-xl';
+    case 'MOYENNE':
+      return 'size-m';
+    case 'FAIBLE':
+      return 'size-s';
+    default:
+      return '';
+  }
 }
 
 export function formatSizeCm(w?: number | null, l?: number | null): string {

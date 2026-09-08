@@ -5,6 +5,7 @@ import com.onsr.pothole.dto.ChangePasswordRequest;
 import com.onsr.pothole.dto.ForgotPasswordRequest;
 import com.onsr.pothole.dto.LoginRequest;
 import com.onsr.pothole.dto.ResetPasswordRequest;
+import com.onsr.pothole.dto.SessionIdRequest;
 import com.onsr.pothole.dto.UserResponse;
 import com.onsr.pothole.security.UserPrincipal;
 import com.onsr.pothole.service.AuthService;
@@ -33,6 +34,22 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(authService.me(principal));
+    }
+
+    @PostMapping("/heartbeat")
+    public ResponseEntity<Void> heartbeat(
+            @Valid @RequestBody SessionIdRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.heartbeat(principal.getUserId(), request.getSessionId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody SessionIdRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.logout(principal.getUserId(), request.getSessionId());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/forgot-password")

@@ -40,8 +40,31 @@
           <button type="button" class="btn-close-detail" (click)="clearSelection()" aria-label="Fermer">&times;</button>
         </div>
 
-        @if (selectedFrameUrl()) {
-          <img class="map-detail-img" [src]="selectedFrameUrl()!" [alt]="point.event.label" />
+        @if (selectedFrameUrl() || selectedAfterUrl() || currentStatus() === 'EN_COURS') {
+          <div class="compare-photos" [class.has-after]="!!selectedAfterUrl() || currentStatus() === 'EN_COURS'">
+            @if (selectedFrameUrl()) {
+              <figure>
+                <img class="map-detail-img" [src]="selectedFrameUrl()!" [alt]="'Avant — ' + point.event.label" />
+                <figcaption>Avant</figcaption>
+              </figure>
+            } @else if (hasFrame(point.event)) {
+              <figure>
+                <div class="map-detail-placeholder">Chargement de la capture…</div>
+                <figcaption>Avant</figcaption>
+              </figure>
+            }
+            @if (selectedAfterUrl()) {
+              <figure>
+                <img class="map-detail-img" [src]="selectedAfterUrl()!" [alt]="'Après — ' + point.event.label" />
+                <figcaption>Après</figcaption>
+              </figure>
+            } @else if (currentStatus() === 'EN_COURS') {
+              <figure>
+                <div class="map-detail-placeholder">Photo après requise pour clôturer</div>
+                <figcaption>Après</figcaption>
+              </figure>
+            }
+          </div>
         } @else if (hasFrame(point.event)) {
           <div class="map-detail-placeholder">Chargement de la capture…</div>
         }
@@ -72,15 +95,16 @@
           @if (isPotholeEvent(point.event) && point.event.size_class) {
             <div class="detail-row">
               <span class="detail-label">Taille</span>
-              <span class="size-pill" [class]="sizeClassCss(point.event.size_class)">{{ sizeClassLabel(point.event.size_class) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Dimensions</span>
-              <span>{{ formatSizeCm(point.event.width_cm_est, point.event.length_cm_est) }}</span>
+              <span>
+                <span class="size-pill" [class]="sizeClassCss(point.event.size_class)">{{ sizeClassShort(point.event.size_class) }}</span>
+                <span class="metric-sub-inline">{{ formatSizeCm(point.event.width_cm_est, point.event.length_cm_est) }}</span>
+              </span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Profondeur</span>
-              <span>{{ depthProxyLabel(point.event.depth_proxy) }}</span>
+              <span>
+                <span class="size-pill" [class]="depthClassCss(point.event.depth_proxy)">{{ depthProxyLabel(point.event.depth_proxy) }}</span>
+              </span>
             </div>
           }
           <div class="detail-row">
