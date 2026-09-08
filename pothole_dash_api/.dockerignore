@@ -1,0 +1,16 @@
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+data/
+runs/
+*.pt
+tests/
+.env
+.git
+.gitignore
+*.md
+.pytest_cache/
+coverage.xml
+.scannerwork/

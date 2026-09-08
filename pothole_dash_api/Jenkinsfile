@@ -1,0 +1,149 @@
+pipeline {
+    agent any
+
+    tools {
+        // NodeJS pour le script d'attente du Quality Gate (meme installation que les autres services)
+        nodejs 'NodeJS22'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        SERVICE_DIR          = 'pothole_dash_api'
+        IMAGE                = 'mallek21/pothole-dash-api'
+        CONTAINER_NAME       = 'pothole-dash-api'
+        APP_PORT             = '5000'
+        PIP_EXTRA_INDEX_URL  = 'https://download.pytorch.org/whl/cpu'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -eu
+                        python3 -V
+                        python3 -m venv .venv
+                        . .venv/bin/activate
+                        pip install -U pip
+                        pip install --extra-index-url "$PIP_EXTRA_INDEX_URL" -r requirements.txt -r requirements-dev.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Tests & Coverage') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -eu
+                        . .venv/bin/activate
+                        pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term -v tests
+                        test -f coverage.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Analyse SonarQube') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    script {
+                        // Le scanner SonarQube (CLI standalone, base Java) exige Java 21+.
+                        def jdk21Home = tool name: 'JDK21', type: 'jdk'
+                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        withEnv(["JAVA_HOME=${jdk21Home}", "PATH+JDK21=${jdk21Home}/bin", "PATH+SCANNER=${scannerHome}/bin"]) {
+                            withSonarQubeEnv(installationName: 'SonarQube',
+                                             credentialsId: 'sonarqube-token') {
+                                sh '''
+                                    set -eu
+                                    java -version
+                                    sonar-scanner \
+                                      -Dsonar.projectKey=pothole-dash-api \
+                                      -Dsonar.projectName="Pothole Dash API" \
+                                      -Dsonar.sources=. \
+                                      -Dsonar.tests=tests \
+                                      -Dsonar.python.version=3.11 \
+                                      -Dsonar.python.coverage.reportPaths=coverage.xml \
+                                      -Dsonar.exclusions=**/tests/**,**/__pycache__/**,**/*.pt,**/*.pyc,.venv/**,data/**,models/**,runs/**
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    withSonarQubeEnv(installationName: 'SonarQube',
+                                     credentialsId: 'sonarqube-token') {
+                        sh '''
+                            set -eu
+                            node scripts/wait-quality-gate.js
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Image Docker') {
+            environment {
+                TAG = "${env.BUILD_NUMBER}"
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                                                       usernameVariable: 'REG_USER',
+                                                       passwordVariable: 'REG_PASS')]) {
+                        sh '''
+                            set -e
+                            echo "$REG_PASS" | docker login -u "$REG_USER" --password-stdin
+                            docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+                            push_with_retry() {
+                                ref="$1"
+                                for attempt in 1 2 3 4 5; do
+                                    if docker push "$ref"; then
+                                        return 0
+                                    fi
+                                    echo "Push echoue (tentative $attempt/5), nouvel essai dans 10s..."
+                                    sleep 10
+                                done
+                                return 1
+                            }
+                            if push_with_retry "$IMAGE:$TAG" && push_with_retry "$IMAGE:latest"; then
+                                echo "Image publiee : $IMAGE:$TAG"
+                            else
+                                echo "ERREUR : Docker Hub inaccessible."
+                                exit 1
+                            fi
+                            docker logout || true
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline Pothole Dash API termine. Image: ${IMAGE}:${BUILD_NUMBER}"
+        }
+        failure {
+            echo 'Le pipeline Pothole Dash API a echoue.'
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}
