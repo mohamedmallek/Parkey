@@ -59,17 +59,25 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 dir("${SERVICE_DIR}") {
-                    withSonarQubeEnv(installationName: 'SonarQube',
-                                     credentialsId: 'sonarqube-token') {
-                        sh '''
-                            set -eu
-                            ./mvnw -B -q \
-                              org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
-                              -Dsonar.projectKey=pothole-spring-api \
-                              -Dsonar.projectName="Pothole Spring API" \
-                              -Dsonar.java.binaries=target/classes \
-                              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-                        '''
+                    script {
+                        // Le scanner SonarQube exige Java 21+ pour tourner (independant
+                        // de la version utilisee pour compiler le code, ici Java 17).
+                        def jdk21Home = tool name: 'JDK21', type: 'jdk'
+                        withEnv(["JAVA_HOME=${jdk21Home}", "PATH+JDK21=${jdk21Home}/bin"]) {
+                            withSonarQubeEnv(installationName: 'SonarQube',
+                                             credentialsId: 'sonarqube-token') {
+                                sh '''
+                                    set -eu
+                                    java -version
+                                    ./mvnw -B -q \
+                                      org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+                                      -Dsonar.projectKey=pothole-spring-api \
+                                      -Dsonar.projectName="Pothole Spring API" \
+                                      -Dsonar.java.binaries=target/classes \
+                                      -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                                '''
+                            }
+                        }
                     }
                 }
             }
