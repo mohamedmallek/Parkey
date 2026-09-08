@@ -60,7 +60,7 @@ pipeline {
             steps {
                 dir("${SERVICE_DIR}") {
                     withSonarQubeEnv(installationName: 'SonarQube',
-                                     credentialsId: 'a38441f4-900c-4d41-8c65-7b51da4ec7fc') {
+                                     credentialsId: 'sonarqube-token') {
                         sh '''
                             set -eu
                             ./mvnw -B -q \
@@ -79,7 +79,7 @@ pipeline {
             steps {
                 dir("${SERVICE_DIR}") {
                     withSonarQubeEnv(installationName: 'SonarQube',
-                                     credentialsId: 'a38441f4-900c-4d41-8c65-7b51da4ec7fc') {
+                                     credentialsId: 'sonarqube-token') {
                         sh '''
                             set -eu
                             node scripts/wait-quality-gate.js
