@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pothole-spring-api-config
+  namespace: parkey
+data:
+  MONGODB_URI: "mongodb://mongodb:27017/onsr_pothole"
+  # Frontend expose en NodePort (voir pothole-angular/k8s/service.yaml) ou
+  # via l'Ingress parkey.local - adapte si tu changes le mode d'exposition.
+  CORS_ORIGINS: "http://localhost:30080,http://parkey.local"
+  ML_SERVICE_URL: "http://pothole-dash-api:5000"
+  APP_URL: "http://localhost:30080"
+  MAIL_FROM_NAME: "Parkey"
+  MAIL_ENABLED: "true"
+  JWT_EXPIRATION_MS: "86400000"
+  SLA_CRITICAL_HOURS: "48"
+  SLA_HIGH_HOURS: "120"
+  SLA_MEDIUM_HOURS: "360"
+  SLA_LOW_HOURS: "720"

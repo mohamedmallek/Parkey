@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pothole-spring-api
+  namespace: parkey
+  labels:
+    app: pothole-spring-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pothole-spring-api
+  template:
+    metadata:
+      labels:
+        app: pothole-spring-api
+    spec:
+      containers:
+        - name: pothole-spring-api
+          image: mallek21/pothole-spring-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: pothole-spring-api-config
+            - secretRef:
+                name: pothole-spring-api-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

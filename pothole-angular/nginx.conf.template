@@ -15,6 +15,22 @@ server {
         add_header Content-Type text/plain;
     }
 
+    # API backend : reverse-proxy vers pothole-spring-api. BACKEND_UPSTREAM
+    # est substitue au demarrage du conteneur (voir /etc/nginx/templates/,
+    # gere automatiquement par l'entrypoint de l'image nginx officielle) -
+    # nom du Service Kubernetes en cluster, http://127.0.0.1:8080 en local.
+    location /api/ {
+        proxy_pass ${BACKEND_UPSTREAM}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        client_max_body_size 500m;
+    }
+
     # Fichiers statiques : cache long, l'outputHashing d'Angular change le nom au contenu
     location ~* \.(?:js|css|woff2?|ttf|eot|ico|png|jpg|jpeg|gif|svg)$ {
         try_files $uri =404;

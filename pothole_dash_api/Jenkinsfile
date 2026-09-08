@@ -17,6 +17,7 @@ pipeline {
         CONTAINER_NAME       = 'pothole-dash-api'
         APP_PORT             = '5000'
         PIP_EXTRA_INDEX_URL  = 'https://download.pytorch.org/whl/cpu'
+        TAG                  = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -98,9 +99,6 @@ pipeline {
         }
 
         stage('Image Docker') {
-            environment {
-                TAG = "${env.BUILD_NUMBER}"
-            }
             steps {
                 dir("${SERVICE_DIR}") {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
@@ -130,6 +128,20 @@ pipeline {
                             docker logout || true
                         '''
                     }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -e
+                        kubectl version --client
+                        kubectl apply -f k8s/
+                        kubectl -n parkey set image deployment/pothole-dash-api pothole-dash-api="$IMAGE:$TAG"
+                        kubectl -n parkey rollout status deployment/pothole-dash-api --timeout=180s
+                    '''
                 }
             }
         }

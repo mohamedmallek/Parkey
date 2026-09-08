@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pothole-spring-api
+  namespace: parkey
+spec:
+  selector:
+    app: pothole-spring-api
+  ports:
+    - port: 8080
+      targetPort: 8080

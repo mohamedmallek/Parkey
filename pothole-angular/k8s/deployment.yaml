@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pothole-angular
+  namespace: parkey
+  labels:
+    app: pothole-angular
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pothole-angular
+  template:
+    metadata:
+      labels:
+        app: pothole-angular
+    spec:
+      containers:
+        - name: pothole-angular
+          image: mallek21/pothole-angular:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_UPSTREAM
+              value: "http://pothole-spring-api:8080"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

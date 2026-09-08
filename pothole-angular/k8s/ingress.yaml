@@ -1,0 +1,27 @@
+# Ingress optionnel (en plus du NodePort). Necessite un ingress controller :
+#   - k3s : Traefik est deja installe par defaut, cet Ingress fonctionne tel quel.
+#   - kind : installer ingress-nginx toi-meme (le cluster doit avoir ete cree
+#     avec des extraPortMappings 80/443, voir la doc kind "Ingress") :
+#       kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+#
+# Ajoute ensuite "127.0.0.1 parkey.local" a ton fichier hosts, puis
+# http://parkey.local/ dans le navigateur.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pothole-angular
+  namespace: parkey
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "500m"
+spec:
+  rules:
+    - host: parkey.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pothole-angular
+                port:
+                  number: 80

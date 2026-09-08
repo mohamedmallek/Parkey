@@ -1,0 +1,28 @@
+# models/*.pt est dans .gitignore (poids de modele, pas versionnes) : le
+# volume est cree vide, puis les poids doivent etre copies dedans a la
+# main apres le premier deploiement, ex. :
+#   kubectl -n parkey cp ../models/model.pt \
+#     $(kubectl -n parkey get pod -l app=pothole-dash-api -o name | head -1 | cut -d/ -f2):/app/models/model.pt
+#   kubectl -n parkey cp ../models/signs_damage_yolo.pt \
+#     $(kubectl -n parkey get pod -l app=pothole-dash-api -o name | head -1 | cut -d/ -f2):/app/models/signs_damage_yolo.pt
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pothole-dash-api-models
+  namespace: parkey
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pothole-dash-api-data
+  namespace: parkey
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

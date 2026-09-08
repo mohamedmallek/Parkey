@@ -16,6 +16,7 @@ pipeline {
         IMAGE          = 'mallek21/pothole-angular'
         CONTAINER_NAME = 'pothole-angular'
         APP_PORT       = '80'
+        TAG            = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -99,9 +100,6 @@ pipeline {
         }
 
         stage('Image Docker') {
-            environment {
-                TAG = "${env.BUILD_NUMBER}"
-            }
             steps {
                 dir("${SERVICE_DIR}") {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
@@ -131,6 +129,20 @@ pipeline {
                             docker logout || true
                         '''
                     }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -e
+                        kubectl version --client
+                        kubectl apply -f k8s/
+                        kubectl -n parkey set image deployment/pothole-angular pothole-angular="$IMAGE:$TAG"
+                        kubectl -n parkey rollout status deployment/pothole-angular --timeout=180s
+                    '''
                 }
             }
         }

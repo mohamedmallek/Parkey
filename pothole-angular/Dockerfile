@@ -11,7 +11,14 @@ RUN npm run build -- --configuration production
 # ---- Etape 2 : image d'execution (Nginx sert les fichiers statiques) ----
 FROM nginx:1.27-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Backend interroge par defaut via le nom du Service Kubernetes (namespace
+# parkey). Surchargeable au lancement du conteneur (docker run -e ... /
+# env du Deployment k8s) si le backend vit ailleurs.
+ENV BACKEND_UPSTREAM=http://pothole-spring-api:8080
+
+# nginx.conf.template est substitue automatiquement au demarrage par
+# l'entrypoint de l'image officielle (envsubst sur /etc/nginx/templates/).
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/pothole-angular/browser /usr/share/nginx/html
 
 EXPOSE 80
