@@ -1,0 +1,7 @@
+target/
+.idea/
+.git/
+*.md
+data/
+application-local.yml
+start-local.ps1

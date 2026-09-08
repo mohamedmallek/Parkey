@@ -1,0 +1,141 @@
+pipeline {
+    agent any
+
+    tools {
+        // Doit correspondre au nom configure dans Manage Jenkins > Tools > JDK installations
+        jdk 'JDK17'
+        // Doit correspondre au nom configure dans Manage Jenkins > Tools > NodeJS installations
+        // (necessaire pour scripts/wait-quality-gate.js)
+        nodejs 'NodeJS22'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        SERVICE_DIR    = 'pothole-spring-api'
+        IMAGE          = 'mallek21/pothole-spring-api'
+        CONTAINER_NAME = 'pothole-spring-api'
+        APP_PORT       = '8080'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build API') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -eu
+                        java -version
+                        chmod +x mvnw
+                        ./mvnw -B -q clean package -DskipTests
+                        ls -la target/*.jar
+                    '''
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: false
+                }
+            }
+        }
+
+        stage('Tests & Coverage') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    sh '''
+                        set -eu
+                        ./mvnw -B -q test
+                        test -f target/site/jacoco/jacoco.xml
+                        echo "Rapport Jacoco : target/site/jacoco/jacoco.xml"
+                    '''
+                }
+            }
+        }
+
+        stage('Analyse SonarQube') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    withSonarQubeEnv(installationName: 'SonarQube',
+                                     credentialsId: 'a38441f4-900c-4d41-8c65-7b51da4ec7fc') {
+                        sh '''
+                            set -eu
+                            ./mvnw -B -q \
+                              org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+                              -Dsonar.projectKey=pothole-spring-api \
+                              -Dsonar.projectName="Pothole Spring API" \
+                              -Dsonar.java.binaries=target/classes \
+                              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                dir("${SERVICE_DIR}") {
+                    withSonarQubeEnv(installationName: 'SonarQube',
+                                     credentialsId: 'a38441f4-900c-4d41-8c65-7b51da4ec7fc') {
+                        sh '''
+                            set -eu
+                            node scripts/wait-quality-gate.js
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Image Docker') {
+            environment {
+                TAG = "${env.BUILD_NUMBER}"
+            }
+            steps {
+                dir("${SERVICE_DIR}") {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                                                       usernameVariable: 'REG_USER',
+                                                       passwordVariable: 'REG_PASS')]) {
+                        sh '''
+                            set -e
+                            echo "$REG_PASS" | docker login -u "$REG_USER" --password-stdin
+                            docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+                            push_with_retry() {
+                                ref="$1"
+                                for attempt in 1 2 3 4 5; do
+                                    if docker push "$ref"; then
+                                        return 0
+                                    fi
+                                    echo "Push echoue (tentative $attempt/5), nouvel essai dans 10s..."
+                                    sleep 10
+                                done
+                                return 1
+                            }
+                            if push_with_retry "$IMAGE:$TAG" && push_with_retry "$IMAGE:latest"; then
+                                echo "Image publiee : $IMAGE:$TAG"
+                            else
+                                echo "ERREUR : Docker Hub inaccessible."
+                                exit 1
+                            fi
+                            docker logout || true
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline Pothole Spring API termine. Image: ${IMAGE}:${BUILD_NUMBER}"
+        }
+        failure {
+            echo 'Le pipeline Pothole Spring API a echoue.'
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}
