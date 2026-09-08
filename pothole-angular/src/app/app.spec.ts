@@ -18,10 +18,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the default section title', async () => {
+  it('should render the login panel when logged out', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Aperçu général');
+    expect(compiled.querySelector('.login-panel-steex')).toBeTruthy();
+    expect(compiled.querySelector('h2')?.textContent).toContain('Bienvenue');
   });
 });
