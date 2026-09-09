@@ -75,7 +75,7 @@ pipeline {
                                       -Dsonar.tests=tests \
                                       -Dsonar.python.version=3.11 \
                                       -Dsonar.python.coverage.reportPaths=coverage.xml \
-                                      -Dsonar.exclusions=**/tests/**,**/__pycache__/**,**/*.pt,**/*.pyc,.venv/**,data/**,models/**,runs/**
+                                      -Dsonar.exclusions=**/tests/**,**/__pycache__/**,**/*.pt,**/*.pyc,.venv/**,data/**,models/**,runs/**,k8s/**
                                 '''
                             }
                         }
