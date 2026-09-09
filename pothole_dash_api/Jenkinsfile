@@ -140,7 +140,7 @@ pipeline {
                         kubectl version --client
                         kubectl apply -f k8s/
                         kubectl -n parkey set image deployment/pothole-dash-api pothole-dash-api="$IMAGE:$TAG"
-                        kubectl -n parkey rollout status deployment/pothole-dash-api --timeout=180s
+                        kubectl -n parkey rollout status deployment/pothole-dash-api --timeout=600s
                     '''
                 }
             }
