@@ -13,8 +13,8 @@ public class MongoConfig {
     @Bean
     public MongoCustomConversions mongoCustomConversions() {
         return MongoCustomConversions.create(config -> {
-            config.registerConverter((Date source) -> source.toInstant());
-            config.registerConverter((Instant source) -> Date.from(source));
+            config.registerConverter(Date::toInstant);
+            config.registerConverter(Date::from);
         });
     }
 }
