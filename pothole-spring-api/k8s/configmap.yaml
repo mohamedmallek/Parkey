@@ -5,9 +5,10 @@ metadata:
   namespace: parkey
 data:
   MONGODB_URI: "mongodb://mongodb:27017/onsr_pothole"
+  JDK_JAVA_OPTIONS: "--add-opens java.base/java.time=ALL-UNNAMED"
   # Frontend expose en NodePort (voir pothole-angular/k8s/service.yaml) ou
   # via l'Ingress parkey.local - adapte si tu changes le mode d'exposition.
-  CORS_ORIGINS: "http://localhost:30080,http://parkey.local"
+  CORS_ORIGINS: "https://parkey.me,http://localhost:30080,http://parkey.local"
   ML_SERVICE_URL: "http://pothole-dash-api:5000"
   APP_URL: "http://localhost:30080"
   MAIL_FROM_NAME: "Parkey"
