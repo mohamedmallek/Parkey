@@ -14,8 +14,18 @@ public class MongoConfig {
     @Bean
     public MongoCustomConversions mongoCustomConversions() {
         return MongoCustomConversions.create(config -> {
-            config.registerConverter((Converter<Date, Instant>) Date::toInstant);
-            config.registerConverter((Converter<Instant, Date>) Date::from);
+            config.registerConverter(new Converter<Date, Instant>() {
+                @Override
+                public Instant convert(Date source) {
+                    return source.toInstant();
+                }
+            });
+            config.registerConverter(new Converter<Instant, Date>() {
+                @Override
+                public Date convert(Instant source) {
+                    return Date.from(source);
+                }
+            });
         });
     }
 }
