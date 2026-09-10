@@ -18,3 +18,4 @@ torchvision>=0.18.0
 # Détection signalétique cassée (YOLOv8)
 # Estimation budget réparation (Gemini optionnel)
 google-generativeai>=0.8.0
+ultralytics>=8.2.0
